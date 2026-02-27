@@ -1,0 +1,15 @@
+{
+  "name": "site-serial",
+  "version": "1.0.0",
+  "description": "Painel de configuração e terminal serial RS485",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "pdf-parse": "^2.4.5",
+    "serialport": "^12.0.0",
+    "socket.io": "^4.7.2"
+  }
+}
