@@ -262,17 +262,22 @@ document.addEventListener('keydown', (e) => {
 // ─── HELPERS DE LEITURA DE CAMPOS ────────────────────────
 function getVal(id) {
     const el = document.getElementById(id);
-    return el ? el.value.trim() : '';
+    if (!el) return '';
+    if (el.type === 'checkbox') return el.checked ? '1' : '0';
+    return el.value.trim();
 }
 
 function setEl(id, v) {
     const el = document.getElementById(id);
-    if (el) el.value = v;
+    if (!el) return;
+    if (el.type === 'checkbox') { el.checked = (String(v) === '1'); return; }
+    el.value = v;
 }
 
 function setSelectVal(id, v) {
     const el = document.getElementById(id);
     if (!el) return;
+    if (el.type === 'checkbox') { el.checked = (String(v) === '1'); return; }
     const str = String(v);
     for (const opt of el.options) {
         if (opt.value === str) { el.value = str; return; }
@@ -462,13 +467,14 @@ function validateInputs() {
 
     for (const cmd of Object.keys(cmdMap)) {
         const els = cmdMap[cmd];
-        const filled = els.filter(el => el.value.trim() !== '');
+        const elVal = el => el.type === 'checkbox' ? (el.checked ? '1' : '') : el.value.trim();
+        const filled = els.filter(el => elVal(el) !== '');
         const anyFilled = filled.length > 0;
 
         els.forEach(el => {
-            const val = el.value.trim();
+            const val = elVal(el);
 
-            if (anyFilled && val === '') {
+            if (anyFilled && el.type !== 'checkbox' && val === '') {
                 el.classList.add('input-invalid');
                 valid = false;
             }
@@ -495,7 +501,7 @@ function buildCommandsFromInputs() {
         const cmd = el.dataset.cmd;
         const idx = parseInt(el.dataset.idx);
         if (!cmdMap[cmd]) cmdMap[cmd] = {};
-        cmdMap[cmd][idx] = el.value.trim();
+        cmdMap[cmd][idx] = el.type === 'checkbox' ? (el.checked ? '1' : '') : el.value.trim();
     });
 
     const commands = [];
@@ -581,9 +587,37 @@ function clamp8(v) { return Math.max(0, Math.min(255, v | 0)); }
 function clamp16(v) { return Math.max(0, Math.min(65535, v | 0)); }
 function clampU32(v) { return Math.max(0, Math.min(4294967295, v >>> 0)); }
 
+
+// ─── REAL-TIME NUMBER VALIDATION ────────────────────────
+document.addEventListener('input', (e) => {
+    const el = e.target;
+    if (el.type !== 'number' || !el.hasAttribute('data-cmd')) return;
+    const val = el.value.trim();
+    if (val === '') { el.classList.remove('input-invalid'); setInputError(el, ''); return; }
+    const n = Number(val);
+    const min = el.getAttribute('min');
+    const max = el.getAttribute('max');
+    let msg = '';
+    if (max !== null && n > Number(max)) msg = 'Valor máximo permitido: ' + max;
+    else if (min !== null && n < Number(min)) msg = 'Valor mínimo permitido: ' + min;
+    el.classList.toggle('input-invalid', msg !== '');
+    setInputError(el, msg);
+});
+
+function setInputError(el, msg) {
+    let err = el.parentElement.querySelector('.input-error-msg');
+    if (!err) { err = document.createElement('span'); err.className = 'input-error-msg'; el.parentElement.appendChild(err); }
+    err.textContent = msg || '';
+    err.classList.toggle('visible', !!msg);
+}
+
 // ─── INIT ─────────────────────────────────────────────────
 if (!('serial' in navigator)) {
     setTimeout(() => logEntry('error', 'Web Serial API não suportada. Use Chrome ou Edge.'), 100);
 }
 
 logEntry('info', 'Painel iniciado. Clique em "Conectar" para selecionar a porta serial.');
+
+document.querySelectorAll('input').forEach(el => {
+    const err = document.createElement('span'); err.className = 'input-error-msg'; el.parentElement.appendChild(err);
+});

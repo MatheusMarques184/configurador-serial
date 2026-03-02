@@ -32,7 +32,7 @@
                         </div>
                         <div class="group-body">
                             <div class="input-row">
-                                <label>APN <span class="field-info">OBRIGATÓRIO</span></label>
+                                <label>APN</label>
                                 <input type="text" id="apn_apn" placeholder="ex: ss.algar.br" data-cmd="APN" data-idx="0">
                             </div>
                             <div class="input-row">
@@ -54,7 +54,7 @@
                         </div>
                         <div class="group-body">
                             <div class="input-row">
-                                <label>Host/IP <span class="field-info">OBRIGATÓRIO</span></label>
+                                <label>Host/IP</label>
                                 <input type="text" id="server1_host" placeholder="ex: trx.voxd.com.br" data-cmd="SERVER1" data-idx="0" data-required="true">
                             </div>
                             <div class="input-row">
@@ -133,29 +133,21 @@
                                 <label>Speed Buzz <span class="field-info">km/h 0-255</span></label>
                                 <input type="number" id="speedbuzz" min="0" max="255" placeholder="60" data-cmd="SPEEDBUZZ" data-idx="0">
                             </div>
-                            <div class="input-row">
+                            <div class="input-row off">
                                 <label>Speed Timed - Velocidade <span class="field-info">km/h</span></label>
                                 <input type="number" id="speedtimed_speed" min="0" max="255" placeholder="50" data-cmd="SPEEDTIMED" data-idx="0">
                             </div>
-                            <div class="input-row">
+                            <div class="input-row off">
                                 <label>Speed Timed - Unix Timestamp</label>
                                 <input type="number" id="speedtimed_time" min="0" max="4294967295" placeholder="1768591456" data-cmd="SPEEDTIMED" data-idx="1">
                             </div>
                             <div class="input-row">
                                 <label>Saída 1 em Overspeed</label>
-                                <select id="ovspdrly1" data-cmd="OVSPDRLY1" data-idx="0" class="toggle-select">
-                                    <option value="">-- Desativado --</option>
-                                    <option value="1">Ativo</option>
-                                    <option value="0">Inativo</option>
-                                </select>
+                                <input type="checkbox" id="ovspdrly1" data-cmd="OVSPDRLY1" data-idx="0" class="toggle"><label class="toggle-label" for="ovspdrly1"></label>
                             </div>
                             <div class="input-row">
                                 <label>Saída 2 em Overspeed</label>
-                                <select id="ovspdrly2" data-cmd="OVSPDRLY2" data-idx="0" class="toggle-select">
-                                    <option value="">-- Desativado --</option>
-                                    <option value="1">Ativo</option>
-                                    <option value="0">Inativo</option>
-                                </select>
+                                <input type="checkbox" id="ovspdrly2" data-cmd="OVSPDRLY2" data-idx="0" class="toggle"><label class="toggle-label" for="ovspdrly2"></label>
                             </div>
                         </div>
                     </div>
@@ -176,20 +168,12 @@
                                 <input type="number" id="speedpunish_duration" min="0" max="255" placeholder="60" data-cmd="SPEEDPUNISH" data-idx="1">
                             </div>
                             <div class="input-row">
-                                <label>Ativar Saída 1</label>
-                                <select id="speedpunish_out1" data-cmd="SPEEDPUNISH" data-idx="2" class="toggle-select">
-                                    <option value="">-- Desativado --</option>
-                                    <option value="1">Ativo</option>
-                                    <option value="0">Inativo</option>
-                                </select>
+                                <label>Ativar Saída 1 na punição</label>
+                                <input type="checkbox" id="speedpunish_out1" data-cmd="SPEEDPUNISH" data-idx="2" class="toggle"><label class="toggle-label" for="speedpunish_out1"></label>
                             </div>
                             <div class="input-row">
-                                <label>Ativar Saída 2</label>
-                                <select id="speedpunish_out2" data-cmd="SPEEDPUNISH" data-idx="3" class="toggle-select">
-                                    <option value="">-- Desativado --</option>
-                                    <option value="1">Ativo</option>
-                                    <option value="0">Inativo</option>
-                                </select>
+                                <label>Ativar Saída 2 na punição</label>
+                                <input type="checkbox" id="speedpunish_out2" data-cmd="SPEEDPUNISH" data-idx="3" class="toggle"><label class="toggle-label" for="speedpunish_out2"></label>
                             </div>
                         </div>
                     </div>
@@ -204,27 +188,18 @@
                             <div class="input-row">
                                 <label>RFID <span class="field-info">0=inativo, 1=ativo, 2=ativo em viagem</span></label>
                                 <select id="rfid" data-cmd="RFID" data-idx="0" class="toggle-select">
-                                    <option value="">-- Desativado --</option>
                                     <option value="0">Inativo</option>
                                     <option value="1">Ativo</option>
                                     <option value="2">Ativo em Viagem</option>
                                 </select>
                             </div>
                             <div class="input-row">
-                                <label>Saída 1 RFID</label>
-                                <select id="rfidrly1" data-cmd="RFIDRLY1" data-idx="0" class="toggle-select">
-                                    <option value="">-- Desativado --</option>
-                                    <option value="1">Ativo</option>
-                                    <option value="0">Inativo</option>
-                                </select>
+                                <label>RFID ativa saída 1</label>
+                                <input type="checkbox" id="rfidrly1" data-cmd="RFIDRLY1" data-idx="0" class="toggle"><label class="toggle-label" for="rfidrly1"></label>
                             </div>
                             <div class="input-row">
-                                <label>Saída 2 RFID</label>
-                                <select id="rfidrly2" data-cmd="RFIDRLY2" data-idx="0" class="toggle-select">
-                                    <option value="">-- Desativado --</option>
-                                    <option value="1">Ativo</option>
-                                    <option value="0">Inativo</option>
-                                </select>
+                                <label>RFID ativa saída 2</label>
+                                <input type="checkbox" id="rfidrly2" data-cmd="RFIDRLY2" data-idx="0" class="toggle"><label class="toggle-label" for="rfidrly2"></label>
                             </div>
                         </div>
                     </div>
@@ -238,11 +213,7 @@
                         <div class="group-body">
                             <div class="input-row">
                                 <label>Relé 1 - Ativo <span class="field-info">0/1</span></label>
-                                <select id="relay1_active" data-cmd="RELAY1" data-idx="0" class="toggle-select">
-                                    <option value="">-- Desativado --</option>
-                                    <option value="0">Inativo</option>
-                                    <option value="1">Ativo</option>
-                                </select>
+                                <input type="checkbox" id="relay1_active" data-cmd="RELAY1" data-idx="0" class="toggle"><label class="toggle-label" for="relay1_active"></label>
                             </div>
                             <div class="input-row">
                                 <label>Relé 1 - Tempo de Buzzer <span class="field-info">segundos</span></label>
@@ -254,11 +225,7 @@
                             </div>
                             <div class="input-row">
                                 <label>Relé 2 - Ativo <span class="field-info">0/1</span></label>
-                                <select id="relay2_active" data-cmd="RELAY2" data-idx="0" class="toggle-select">
-                                    <option value="">-- Desativado --</option>
-                                    <option value="0">Inativo</option>
-                                    <option value="1">Ativo</option>
-                                </select>
+                                <input type="checkbox" id="relay2_active" data-cmd="RELAY2" data-idx="0" class="toggle"><label class="toggle-label" for="relay2_active"></label>
                             </div>
                             <div class="input-row">
                                 <label>Relé 2 - Tempo de Buzzer <span class="field-info">segundos</span></label>
@@ -280,11 +247,7 @@
                         <div class="group-body">
                             <div class="input-row">
                                 <label>Ignição Virtual</label>
-                                <select id="accline" data-cmd="ACCLINE" data-idx="0" class="toggle-select">
-                                    <option value="">-- Desativado --</option>
-                                    <option value="0">Inativo</option>
-                                    <option value="1">Ativo</option>
-                                </select>
+                                <input type="checkbox" id="accline" data-cmd="ACCLINE" data-idx="0" class="toggle"><label class="toggle-label" for="accline"></label>
                             </div>
                             <div class="special-actions">
                                 <button class="btn btn-warning" onclick="sendCommand('RESET#')">
