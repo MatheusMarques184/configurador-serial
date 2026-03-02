@@ -8,205 +8,336 @@
 </head>
 <body>
     <div id="app">
-        <!-- PAINEL ESQUERDO: Configurações -->
-        <aside id="sidebar">
-            <div class="sidebar-header">
-                <div class="sidebar-title">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
-                    Configurar
-                </div>
-            </div>
+        <!-- BARRA SUPERIOR: Conexão -->
+        <div id="connection-bar">
+            <button id="btn-connect" class="btn btn-connect" onclick="toggleConnect()">Conectar</button>
+            <div id="status-dot" class="status-dot disconnected" title="Desconectado"></div>
+            <span id="status-text" style="margin-left: 10px;">Desconectado</span>
+            <span id="stats-text" style="margin-left: auto; margin-right: 10px;"></span>
+        </div>
 
-            <div class="sidebar-body">
-                <!-- APN / Rede -->
-                <div class="config-group">
-                    <div class="group-header" onclick="toggleGroup(this)">
-                        <span>📡 Rede / APN</span>
-                        <span class="chevron">▾</span>
-                    </div>
-                    <div class="group-body">
-                        <label>APN</label>
-                        <input type="text" id="apn" placeholder="ex: ss.algar.br,algar,algar">
-                    </div>
-                </div>
-
-                <!-- Servidor Principal -->
-                <div class="config-group">
-                    <div class="group-header" onclick="toggleGroup(this)">
-                        <span>🌐 Servidor Principal</span>
-                        <span class="chevron">▾</span>
-                    </div>
-                    <div class="group-body">
-                        <label>Servidor</label>
-                        <input type="text" id="server1" placeholder="ex: trx.voxd.com.br,9092">
-                    </div>
-                </div>
-
-                <!-- Servidor Secundário -->
-                <div class="config-group">
-                    <div class="group-header" onclick="toggleGroup(this)">
-                        <span>🌐 Servidor Secundário</span>
-                        <span class="chevron">▾</span>
-                    </div>
-                    <div class="group-body">
-                        <label>Servidor</label>
-                        <input type="text" id="server2" placeholder="ex: back.voxd.com.br,8081">
-                    </div>
-                </div>
-
-                <!-- Timers -->
-                <div class="config-group">
-                    <div class="group-header" onclick="toggleGroup(this)">
-                        <span>⏱ Transmissão</span>
-                        <span class="chevron">▾</span>
-                    </div>
-                    <div class="group-body">
-                        <label>Angle transmitt<span class="field-info">heading</span></label>
-                        <input type="text" id="anglesTrans" placeholder="20">
-
-                        <label>Timer<span class="field-info">segundos</span></label>
-                        <input type="text" id="timerTrans" placeholder="30,1800">
-                    </div>
-                </div>
-
-                <div class="config-group">
-                    <div class="group-header" onclick="toggleGroup(this)">
-                        <span>🌐 Marcadores</span>
-                        <span class="chevron">▾</span>
-                    </div>
-                    <div class="group-body">
-                        <label>Odometro<span class="field-info">centenas de metro</span></label>
-                        <input type="text" id="mileage" placeholder="ex: 200">
-
-                        <label>Secsmeter<span class="field-info">segundos</span></label>
-                        <input type="text" id="secondsMeter" placeholder="ex: 10000">
-                    </div>
-                </div>
-
-                <!-- Velocidade -->
-                <div class="config-group">
-                    <div class="group-header" onclick="toggleGroup(this)">
-                        <span>🚗 Velocidade</span>
-                        <span class="chevron">▾</span>
-                    </div>
-                    <div class="group-body">
-                        <label>Speed Buzz<span class="field-info">km/h</span></label>
-                        <input type="text" id="speed_buzz" placeholder="60">
-
-                        <label>Overspeed relay 1</label>
-                        <div class="toggle-row">
-                            <input type="checkbox" id="overspeedRelay1" class="toggle">
-                            <label for="overspeedRelay1" class="toggle-label"></label>
-                            <span class="toggle-hint">bool</span>
-                        </div>
-
-                        <label>Overspeed relay 2</label>
-                        <div class="toggle-row">
-                            <input type="checkbox" id="overspeedRelay2" class="toggle">
-                            <label for="overspeedRelay2" class="toggle-label"></label>
-                            <span class="toggle-hint">bool</span>
-                        </div>
-
-                        <label>Speed punish<span class="field-info">km/h</span></label>
-                        <input type="text" id="speed_punish" placeholder="20,60,0,0">
-                    </div>
-                </div>
-
-                <!-- iButton -->
-                <div class="config-group">
-                    <div class="group-header" onclick="toggleGroup(this)">
-                        <span>🔑 RFID</span>
-                        <span class="chevron">▾</span>
-                    </div>
-                    <div class="group-body">
-                        <label>RFID<span class="field-info">km/h</span></label> 
-                        <!-- Controla RFID. X = 2 ativo durante viagem / 1 ativo / 0 inativo -->
-                        <input type="text" id="rfid" placeholder="fazer ainda">
-
-                        <label>RFID relay 1</label>
-                        <div class="toggle-row">
-                            <input type="checkbox" id="rfidRelay1" class="toggle">
-                            <label for="rfidRelay1" class="toggle-label"></label>
-                            <span class="toggle-hint">bool</span>
-                        </div>
-
-                        <label>RFID relay 2</label>
-                        <div class="toggle-row">
-                            <input type="checkbox" id="rfidRelay2" class="toggle">
-                            <label for="rfidRelay2" class="toggle-label"></label>
-                            <span class="toggle-hint">bool</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Sistema -->
-                <div class="config-group">
-                    <div class="group-header" onclick="toggleGroup(this)">
-                        <span>⚙️ Sistema</span>
-                        <span class="chevron">▾</span>
-                    </div>
-                    <div class="group-body">
-                        <label>Ignição virtual</label>
-                        <div class="toggle-row">
-                            <input type="checkbox" id="ignVirtual" class="toggle">
-                            <label for="ignVirtual" class="toggle-label"></label>
-                            <span class="toggle-hint">bool</span>
-                        </div>
-                    </div>
-                </div>
-
-            <div class="sidebar-footer">
-                <button class="btn btn-secondary" onclick="lerConfiguracoes()">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                    Ler do Dispositivo
-                </button>
-                <button class="btn btn-primary" onclick="enviarConfiguracoes()">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17,8 12,3 7,8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                    Enviar ao Dispositivo
-                </button>
-            </div>
-        </aside>
-
-        <!-- PAINEL DIREITO: Terminal Serial -->
+        <!-- PAINEL PRINCIPAL: Comandos -->
         <main id="main">
-            <!-- Barra de Conexão -->
-            <div id="connection-bar">
-                <button id="btn-connect" class="btn btn-connect" onclick="toggleConnect()">Conectar</button>
-                <div id="status-dot" class="status-dot disconnected" title="Desconectado"></div>
-            </div>
+            <div class="commands-panel">
+                <div class="commands-header">
+                    <h2>📋 Configurações de Comando</h2>
+                </div>
 
-
-
-            <!-- TAB: Terminal -->
-            <div id="tab-terminal" class="tab-content active">
-                <div id="terminal-log" onclick="terminalFocus()"></div>
-                <div id="terminal-send-bar">
-                    <div class="send-bar-left">
-                        <span class="send-prefix">ID MSG:</span>
-                        <input type="text" id="quick-idmsg" value="0x01" placeholder="0x01" class="hex-input small">
-                        <span class="send-prefix">DEST:</span>
-                        <input type="text" id="quick-dest" value="0x01" placeholder="0x01" class="hex-input small">
-                        <span class="send-prefix">PAYLOAD (hex):</span>
-                        <input type="text" id="quick-payload" placeholder="AA BB CC ..." class="hex-input">
+                <div class="commands-body">
+                    <!-- APN / Rede -->
+                    <div class="config-group">
+                        <div class="group-header" onclick="toggleGroup(this)">
+                            <span>📡 Rede / APN</span>
+                            <span class="chevron">▾</span>
+                        </div>
+                        <div class="group-body">
+                            <div class="input-row">
+                                <label>APN <span class="field-info">OBRIGATÓRIO</span></label>
+                                <input type="text" id="apn_apn" placeholder="ex: ss.algar.br" data-cmd="APN" data-idx="0">
+                            </div>
+                            <div class="input-row">
+                                <label>Usuário APN</label>
+                                <input type="text" id="apn_user" placeholder="ex: algar" data-cmd="APN" data-idx="1">
+                            </div>
+                            <div class="input-row">
+                                <label>Senha APN</label>
+                                <input type="text" id="apn_pass" placeholder="ex: algar" data-cmd="APN" data-idx="2">
+                            </div>
+                        </div>
                     </div>
-                    <div class="send-bar-right">
-                        <label class="send-opt"><input type="checkbox" id="chk-hex-mode" checked> Montar RS485</label>
-                        <button class="btn btn-send" onclick="sendFromTerminal()">
-                            Enviar ▶
-                        </button>
-                        <button class="btn btn-danger-sm" onclick="clearTerminal()">Limpar</button>
+
+                    <!-- Servidor Principal -->
+                    <div class="config-group">
+                        <div class="group-header" onclick="toggleGroup(this)">
+                            <span>🌐 Servidor Principal</span>
+                            <span class="chevron">▾</span>
+                        </div>
+                        <div class="group-body">
+                            <div class="input-row">
+                                <label>Host/IP <span class="field-info">OBRIGATÓRIO</span></label>
+                                <input type="text" id="server1_host" placeholder="ex: trx.voxd.com.br" data-cmd="SERVER1" data-idx="0" data-required="true">
+                            </div>
+                            <div class="input-row">
+                                <label>Porta <span class="field-info">0-65535</span></label>
+                                <input type="number" id="server1_port" min="0" max="65535" placeholder="9092" data-cmd="SERVER1" data-idx="1">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Servidor Secundário -->
+                    <div class="config-group">
+                        <div class="group-header" onclick="toggleGroup(this)">
+                            <span>🌐 Servidor Secundário</span>
+                            <span class="chevron">▾</span>
+                        </div>
+                        <div class="group-body">
+                            <div class="input-row">
+                                <label>Host/IP</label>
+                                <input type="text" id="server2_host" placeholder="ex: back.voxd.com.br" data-cmd="SERVER2" data-idx="0">
+                            </div>
+                            <div class="input-row">
+                                <label>Porta <span class="field-info">0-65535</span></label>
+                                <input type="number" id="server2_port" min="0" max="65535" placeholder="8081" data-cmd="SERVER2" data-idx="1">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Transmissão -->
+                    <div class="config-group">
+                        <div class="group-header" onclick="toggleGroup(this)">
+                            <span>⏱ Transmissão</span>
+                            <span class="chevron">▾</span>
+                        </div>
+                        <div class="group-body">
+                            <div class="input-row">
+                                <label>Timer Ignição Ligada <span class="field-info">segundos</span></label>
+                                <input type="number" id="timer_ignon" min="0" max="65535" placeholder="30" data-cmd="TIMER" data-idx="0">
+                            </div>
+                            <div class="input-row">
+                                <label>Timer Ignição Desligada <span class="field-info">segundos</span></label>
+                                <input type="number" id="timer_ignoff" min="0" max="65535" placeholder="1800" data-cmd="TIMER" data-idx="1">
+                            </div>
+                            <div class="input-row">
+                                <label>Ângulo de Transmissão <span class="field-info">graus</span></label>
+                                <input type="number" id="angletmt" min="0" max="255" placeholder="20" data-cmd="ANGLETMT" data-idx="0">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Marcadores -->
+                    <div class="config-group">
+                        <div class="group-header" onclick="toggleGroup(this)">
+                            <span>📊 Marcadores</span>
+                            <span class="chevron">▾</span>
+                        </div>
+                        <div class="group-body">
+                            <div class="input-row">
+                                <label>Odômetro <span class="field-info">centenas metro</span></label>
+                                <input type="number" id="mileage" min="0" max="4294967295" placeholder="200" data-cmd="MILEAGE" data-idx="0">
+                            </div>
+                            <div class="input-row">
+                                <label>Seconds Meter<span class="field-info">segundos</span></label>
+                                <input type="number" id="secsmeter" min="0" max="4294967295" placeholder="0" data-cmd="SECSMETER" data-idx="0">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Velocidade -->
+                    <div class="config-group">
+                        <div class="group-header" onclick="toggleGroup(this)">
+                            <span>🚗 Velocidade</span>
+                            <span class="chevron">▾</span>
+                        </div>
+                        <div class="group-body">
+                            <div class="input-row">
+                                <label>Speed Buzz <span class="field-info">km/h 0-255</span></label>
+                                <input type="number" id="speedbuzz" min="0" max="255" placeholder="60" data-cmd="SPEEDBUZZ" data-idx="0">
+                            </div>
+                            <div class="input-row">
+                                <label>Speed Timed - Velocidade <span class="field-info">km/h</span></label>
+                                <input type="number" id="speedtimed_speed" min="0" max="255" placeholder="50" data-cmd="SPEEDTIMED" data-idx="0">
+                            </div>
+                            <div class="input-row">
+                                <label>Speed Timed - Unix Timestamp</label>
+                                <input type="number" id="speedtimed_time" min="0" max="4294967295" placeholder="1768591456" data-cmd="SPEEDTIMED" data-idx="1">
+                            </div>
+                            <div class="input-row">
+                                <label>Saída 1 em Overspeed</label>
+                                <select id="ovspdrly1" data-cmd="OVSPDRLY1" data-idx="0" class="toggle-select">
+                                    <option value="">-- Desativado --</option>
+                                    <option value="1">Ativo</option>
+                                    <option value="0">Inativo</option>
+                                </select>
+                            </div>
+                            <div class="input-row">
+                                <label>Saída 2 em Overspeed</label>
+                                <select id="ovspdrly2" data-cmd="OVSPDRLY2" data-idx="0" class="toggle-select">
+                                    <option value="">-- Desativado --</option>
+                                    <option value="1">Ativo</option>
+                                    <option value="0">Inativo</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Speed Punish -->
+                    <div class="config-group">
+                        <div class="group-header" onclick="toggleGroup(this)">
+                            <span>⚠️ Punição por Velocidade</span>
+                            <span class="chevron">▾</span>
+                        </div>
+                        <div class="group-body">
+                            <div class="input-row">
+                                <label>Tempo Acima da Velocidade <span class="field-info">segundos 0-255</span></label>
+                                <input type="number" id="speedpunish_time" min="0" max="255" placeholder="20" data-cmd="SPEEDPUNISH" data-idx="0">
+                            </div>
+                            <div class="input-row">
+                                <label>Tempo de Punição <span class="field-info">segundos 0-255</span></label>
+                                <input type="number" id="speedpunish_duration" min="0" max="255" placeholder="60" data-cmd="SPEEDPUNISH" data-idx="1">
+                            </div>
+                            <div class="input-row">
+                                <label>Ativar Saída 1</label>
+                                <select id="speedpunish_out1" data-cmd="SPEEDPUNISH" data-idx="2" class="toggle-select">
+                                    <option value="">-- Desativado --</option>
+                                    <option value="1">Ativo</option>
+                                    <option value="0">Inativo</option>
+                                </select>
+                            </div>
+                            <div class="input-row">
+                                <label>Ativar Saída 2</label>
+                                <select id="speedpunish_out2" data-cmd="SPEEDPUNISH" data-idx="3" class="toggle-select">
+                                    <option value="">-- Desativado --</option>
+                                    <option value="1">Ativo</option>
+                                    <option value="0">Inativo</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RFID -->
+                    <div class="config-group">
+                        <div class="group-header" onclick="toggleGroup(this)">
+                            <span>🔑 RFID</span>
+                            <span class="chevron">▾</span>
+                        </div>
+                        <div class="group-body">
+                            <div class="input-row">
+                                <label>RFID <span class="field-info">0=inativo, 1=ativo, 2=ativo em viagem</span></label>
+                                <select id="rfid" data-cmd="RFID" data-idx="0" class="toggle-select">
+                                    <option value="">-- Desativado --</option>
+                                    <option value="0">Inativo</option>
+                                    <option value="1">Ativo</option>
+                                    <option value="2">Ativo em Viagem</option>
+                                </select>
+                            </div>
+                            <div class="input-row">
+                                <label>Saída 1 RFID</label>
+                                <select id="rfidrly1" data-cmd="RFIDRLY1" data-idx="0" class="toggle-select">
+                                    <option value="">-- Desativado --</option>
+                                    <option value="1">Ativo</option>
+                                    <option value="0">Inativo</option>
+                                </select>
+                            </div>
+                            <div class="input-row">
+                                <label>Saída 2 RFID</label>
+                                <select id="rfidrly2" data-cmd="RFIDRLY2" data-idx="0" class="toggle-select">
+                                    <option value="">-- Desativado --</option>
+                                    <option value="1">Ativo</option>
+                                    <option value="0">Inativo</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Relés -->
+                    <div class="config-group">
+                        <div class="group-header" onclick="toggleGroup(this)">
+                            <span>🔌 Relés</span>
+                            <span class="chevron">▾</span>
+                        </div>
+                        <div class="group-body">
+                            <div class="input-row">
+                                <label>Relé 1 - Ativo <span class="field-info">0/1</span></label>
+                                <select id="relay1_active" data-cmd="RELAY1" data-idx="0" class="toggle-select">
+                                    <option value="">-- Desativado --</option>
+                                    <option value="0">Inativo</option>
+                                    <option value="1">Ativo</option>
+                                </select>
+                            </div>
+                            <div class="input-row">
+                                <label>Relé 1 - Tempo de Buzzer <span class="field-info">segundos</span></label>
+                                <input type="number" id="relay1_buzzer" min="0" max="255" placeholder="10" data-cmd="RELAY1" data-idx="1">
+                            </div>
+                            <div class="input-row">
+                                <label>Relé 1 - Timestamp</label>
+                                <input type="number" id="relay1_time" min="0" max="4294967295" placeholder="0" data-cmd="RELAY1" data-idx="2">
+                            </div>
+                            <div class="input-row">
+                                <label>Relé 2 - Ativo <span class="field-info">0/1</span></label>
+                                <select id="relay2_active" data-cmd="RELAY2" data-idx="0" class="toggle-select">
+                                    <option value="">-- Desativado --</option>
+                                    <option value="0">Inativo</option>
+                                    <option value="1">Ativo</option>
+                                </select>
+                            </div>
+                            <div class="input-row">
+                                <label>Relé 2 - Tempo de Buzzer <span class="field-info">segundos</span></label>
+                                <input type="number" id="relay2_buzzer" min="0" max="255" placeholder="10" data-cmd="RELAY2" data-idx="1">
+                            </div>
+                            <div class="input-row">
+                                <label>Relé 2 - Timestamp</label>
+                                <input type="number" id="relay2_time" min="0" max="4294967295" placeholder="0" data-cmd="RELAY2" data-idx="2">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sistema -->
+                    <div class="config-group">
+                        <div class="group-header" onclick="toggleGroup(this)">
+                            <span>⚙️ Sistema</span>
+                            <span class="chevron">▾</span>
+                        </div>
+                        <div class="group-body">
+                            <div class="input-row">
+                                <label>Ignição Virtual</label>
+                                <select id="accline" data-cmd="ACCLINE" data-idx="0" class="toggle-select">
+                                    <option value="">-- Desativado --</option>
+                                    <option value="0">Inativo</option>
+                                    <option value="1">Ativo</option>
+                                </select>
+                            </div>
+                            <div class="special-actions">
+                                <button class="btn btn-warning" onclick="sendCommand('RESET#')">
+                                    🔄 Reiniciar Dispositivo
+                                </button>
+                                <button class="btn btn-warning" onclick="sendCommand('CLEARMEM#')">
+                                    🗑️ Limpar Memória de Eventos
+                                </button>
+                                <button class="btn btn-danger" onclick="sendCommand('CLEARCONF#')">
+                                    ⚠️ Voltar Configurações de Fábrica
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-
-
-            <!-- Barra de Status -->
-            <div id="status-bar">
-                <span id="status-text">Desconectado</span>
-                <span id="stats-text"></span>
+                <div class="commands-footer">
+                    <button class="btn btn-secondary" onclick="lerConfiguracoes()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Ler do Dispositivo
+                    </button>
+                    <button class="btn btn-primary" onclick="enviarConfiguracoes()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17,8 12,3 7,8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        Enviar Configurações
+                    </button>
+                </div>
             </div>
         </main>
+
+        <!-- TERMINAL (REDUZIDO) -->
+        <div id="terminal-container">
+            <div id="terminal-header">
+                <span>📡 Terminal Serial</span>
+                <button class="btn btn-danger-sm" onclick="clearTerminal()" title="Limpar terminal">🗑️</button>
+            </div>
+            <div id="terminal-log" onclick="terminalFocus()"></div>
+            <div id="terminal-send-bar">
+                <div class="send-bar-left">
+                    <span class="send-prefix">ID MSG:</span>
+                    <input type="text" id="quick-idmsg" value="0x01" placeholder="0x01" class="hex-input small">
+                    <span class="send-prefix">DEST:</span>
+                    <input type="text" id="quick-dest" value="0x01" placeholder="0x01" class="hex-input small">
+                    <span class="send-prefix">PAYLOAD (hex):</span>
+                    <input type="text" id="quick-payload" placeholder="AA BB CC ..." class="hex-input">
+                </div>
+                <div class="send-bar-right">
+                    <label class="send-opt"><input type="checkbox" id="chk-hex-mode" checked> Montar RS485</label>
+                    <button class="btn btn-send" onclick="sendFromTerminal()">
+                        Enviar ▶
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="js/app.js"></script>

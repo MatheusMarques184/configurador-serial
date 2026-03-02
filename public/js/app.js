@@ -70,9 +70,9 @@ function buildRS485Message(idMsg, payload, dest) {
 
     // Header: ORIG_1, ORIG_0, DEST_1, DEST_0, ID_MSG, NUM_SEQ, NUM_PCTS, PCT_CORR, TAM_1, TAM_0
     const header = [
-        0xEC,                      // ORIG_1 (PC type)
-        0x01,                      // ORIG_0 (PC address)
-        ENDERECO_DISPOSITIVO_485,  // DEST_1 (device type)
+		0x01,                      // ORIG_1 (PC type)
+        ENDERECO_DISPOSITIVO_485,  // ORIG_0 (PC address)
+        0xCF,					   // DEST_1 (device type)
         dest,                      // DEST_0 (device address)
         idMsg,                     // ID_MSG
         0x00,                      // NUM_SEQ
@@ -265,19 +265,19 @@ function getVal(id) {
     return el ? el.value.trim() : '';
 }
 
-function getChecked(id) {
-    const el = document.getElementById(id);
-    return el ? el.checked : false;
-}
-
 function setEl(id, v) {
     const el = document.getElementById(id);
     if (el) el.value = v;
 }
 
-function setChk(id, v) {
+function setSelectVal(id, v) {
     const el = document.getElementById(id);
-    if (el) el.checked = v;
+    if (!el) return;
+    const str = String(v);
+    for (const opt of el.options) {
+        if (opt.value === str) { el.value = str; return; }
+    }
+    el.value = '';
 }
 
 // ─── SERIALIZAÇÃO DA STRUCT ───────────────────────────────
@@ -296,68 +296,51 @@ function serializeConfig() {
     function writeU32(v) { view.setUint32(o, clampU32(v), true); o += 4; }
     function writeBool(v) { buf[o++] = v ? 1 : 0; }
 
-    // APN: "apn,user,pass"
-    const apnParts = getVal('apn').split(',');
-    writeStr(apnParts[0] || '', 32);
-    writeStr(apnParts[1] || '', 16);
-    writeStr(apnParts[2] || '', 16);
+    writeStr(getVal('apn_apn'), 32);
+    writeStr(getVal('apn_user'), 16);
+    writeStr(getVal('apn_pass'), 16);
 
-    // server1: "host,port"
-    const s1 = splitHostPort(getVal('server1'));
-    writeStr(s1.host, 64);
-    writeU16(s1.port);
+    writeStr(getVal('server1_host'), 64);
+    writeU16(parseInt(getVal('server1_port')) || 0);
 
-    // timerTrans: "ignon,ignoff"
-    const timers = getVal('timerTrans').split(',');
-    writeU16(parseInt(timers[0]) || 0);
-    writeU16(parseInt(timers[1]) || 0);
+    writeU16(parseInt(getVal('timer_ignon')) || 0);
+    writeU16(parseInt(getVal('timer_ignoff')) || 0);
 
-    // speed_buzz
-    writeU8(parseInt(getVal('speed_buzz')) || 0);
+    writeU8(parseInt(getVal('speedbuzz')) || 0);
 
-    // rfid: "val0,val1"
-    const rfidParts = getVal('rfid').split(',');
-    writeU8(parseInt(rfidParts[0]) || 0);
-    writeU8(parseInt(rfidParts[1]) || 0);
+    writeU8(parseInt(getVal('rfid')) || 0);
+    writeU8(0);
 
-    writeBool(false);   // cfg_usa_eeprom
-    writeU16(0);        // cfg_sim_pin
-    writeBool(getChecked('ignVirtual'));
-    writeU8(parseInt(getVal('anglesTrans')) || 0);
-    writeU8(getChecked('overspeedRelay2') ? 1 : 0);
-    writeU8(getChecked('rfidRelay2') ? 1 : 0);
-    writeU8(0);         // cfg_buzz_volume
-    writeU8(getChecked('rfidRelay1') ? 1 : 0);
-    writeBool(false);   // cfg_delayed_auth_rfid
-    writeBool(getChecked('overspeedRelay1'));
-    writeU8(0);         // cfg_speed_buzz_km_modoviagem
-    writeU32(0);        // cfg_speed_buzz_km_modoviagem_unixtime
+    writeBool(false);
+    writeU16(0);
+    writeBool(getVal('accline') === '1');
+    writeU8(parseInt(getVal('angletmt')) || 0);
+    writeU8(getVal('ovspdrly2') !== '' ? parseInt(getVal('ovspdrly2')) : 0);
+    writeU8(getVal('rfidrly2') !== '' ? parseInt(getVal('rfidrly2')) : 0);
+    writeU8(0);
+    writeU8(getVal('rfidrly1') !== '' ? parseInt(getVal('rfidrly1')) : 0);
+    writeBool(false);
+    writeBool(getVal('ovspdrly1') === '1');
+    writeU8(0);
+    writeU32(0);
 
-    // server2: "host,port"
-    const s2 = splitHostPort(getVal('server2'));
-    writeStr(s2.host, 64);
-    writeU16(s2.port);
+    writeStr(getVal('server2_host'), 64);
+    writeU16(parseInt(getVal('server2_port')) || 0);
 
-    // speed_punish: "time_over,km,saida1,saida2"
-    const sp = getVal('speed_punish').split(',');
-    writeU8(parseInt(sp[0]) || 0);
-    writeU8(parseInt(sp[1]) || 0);
-    writeU8(parseInt(sp[2]) || 0);
-    writeU8(parseInt(sp[3]) || 0);
+    writeU8(parseInt(getVal('speedpunish_time')) || 0);
+    writeU8(parseInt(getVal('speedpunish_duration')) || 0);
+    writeU8(getVal('speedpunish_out1') !== '' ? parseInt(getVal('speedpunish_out1')) : 0);
+    writeU8(getVal('speedpunish_out2') !== '' ? parseInt(getVal('speedpunish_out2')) : 0);
 
-    // mileage (uint32) — offset 223
     writeU32(parseInt(getVal('mileage')) || 0);
-
-    // secondsMeter (uint32) — offset 227
-    writeU32(parseInt(getVal('secondsMeter')) || 0);
+    writeU32(parseInt(getVal('secsmeter')) || 0);
 
     return Array.from(buf);
 }
 
 // ─── DESSERIALIZAÇÃO DA STRUCT ────────────────────────────
 function deserializeConfig(bytes) {
-    isLoadingConfig = true;
-    if (bytes.length < STRUCT_SIZE) { isLoadingConfig = false; return; }
+    if (bytes.length < STRUCT_SIZE) return;
     const buf = new Uint8Array(bytes);
     const view = new DataView(buf.buffer);
     let o = 0;
@@ -374,51 +357,46 @@ function deserializeConfig(bytes) {
     function readU32() { const v = view.getUint32(o, true); o += 4; return v; }
     function readBool() { return buf[o++] !== 0; }
 
-    const apn = readStr(32);
-    const apnUser = readStr(16);
-    const apnPass = readStr(16);
-    setEl('apn', [apn, apnUser, apnPass].filter(Boolean).join(','));
+    setEl('apn_apn', readStr(32));
+    setEl('apn_user', readStr(16));
+    setEl('apn_pass', readStr(16));
 
-    const serverAddr = readStr(64);
-    const serverPort = readU16();
-    setEl('server1', serverPort ? `${serverAddr},${serverPort}` : serverAddr);
+    setEl('server1_host', readStr(64));
+    setEl('server1_port', readU16() || '');
 
-    const timerIgnOn = readU16();
-    const timerIgnOff = readU16();
-    setEl('timerTrans', `${timerIgnOn},${timerIgnOff}`);
+    setEl('timer_ignon', readU16() || '');
+    setEl('timer_ignoff', readU16() || '');
 
-    setEl('speed_buzz', readU8());
+    setEl('speedbuzz', readU8() || '');
 
-    const rfid0 = readU8();
-    const rfid1 = readU8();
-    setEl('rfid', `${rfid0},${rfid1}`);
+    setSelectVal('rfid', readU8());
+    readU8();
 
-    readBool();                                     // cfg_usa_eeprom
-    readU16();                                      // cfg_sim_pin
-    setChk('ignVirtual', readBool());
-    setEl('anglesTrans', readU8());
-    setChk('overspeedRelay2', readU8() !== 0);
-    setChk('rfidRelay2', readU8() !== 0);
-    readU8();                                       // cfg_buzz_volume
-    setChk('rfidRelay1', readU8() !== 0);
-    readBool();                                     // cfg_delayed_auth_rfid
-    setChk('overspeedRelay1', readBool());
-    readU8();                                       // cfg_speed_buzz_km_modoviagem
-    readU32();                                      // cfg_speed_buzz_km_modoviagem_unixtime
+    readBool();
+    readU16();
+    setSelectVal('accline', readBool() ? 1 : 0);
+    setEl('angletmt', readU8() || '');
+    setSelectVal('ovspdrly2', readU8());
+    setSelectVal('rfidrly2', readU8());
+    readU8();
+    setSelectVal('rfidrly1', readU8());
+    readBool();
+    setSelectVal('ovspdrly1', readBool() ? 1 : 0);
+    readU8();
+    readU32();
 
-    const serverAddr2 = readStr(64);
-    const serverPort2 = readU16();
-    setEl('server2', serverPort2 ? `${serverAddr2},${serverPort2}` : serverAddr2);
+    setEl('server2_host', readStr(64));
+    setEl('server2_port', readU16() || '');
 
-    const sp0 = readU8(); const sp1 = readU8();
-    const sp2 = readU8(); const sp3 = readU8();
-    setEl('speed_punish', `${sp0},${sp1},${sp2},${sp3}`);
+    setEl('speedpunish_time', readU8() || '');
+    setEl('speedpunish_duration', readU8() || '');
+    setSelectVal('speedpunish_out1', readU8());
+    setSelectVal('speedpunish_out2', readU8());
 
-    setEl('mileage', readU32());
-    setEl('secondsMeter', readU32());
+    setEl('mileage', readU32() || '');
+    setEl('secsmeter', readU32() || '');
 
     logEntry('info', `Configuração carregada (${STRUCT_SIZE} bytes)`);
-    isLoadingConfig = false;
 }
 
 // ─── PARSE CONFIG DO BUFFER RX ────────────────────────────
@@ -470,49 +448,83 @@ function tryParseConfig(bytes) {
     if (recvBuffer.length > 4096) recvBuffer = recvBuffer.slice(-2048);
 }
 
+// ─── VALIDAÇÃO ────────────────────────────────────────────
+function validateInputs() {
+    let valid = true;
+
+    const cmdMap = {};
+    document.querySelectorAll('[data-cmd]').forEach(el => {
+        el.classList.remove('input-invalid');
+        const cmd = el.dataset.cmd;
+        if (!cmdMap[cmd]) cmdMap[cmd] = [];
+        cmdMap[cmd].push(el);
+    });
+
+    for (const cmd of Object.keys(cmdMap)) {
+        const els = cmdMap[cmd];
+        const filled = els.filter(el => el.value.trim() !== '');
+        const anyFilled = filled.length > 0;
+
+        els.forEach(el => {
+            const val = el.value.trim();
+
+            if (anyFilled && val === '') {
+                el.classList.add('input-invalid');
+                valid = false;
+            }
+
+            if (val !== '' && el.type === 'number') {
+                const n = Number(val);
+                const min = el.getAttribute('min');
+                const max = el.getAttribute('max');
+                if ((min !== null && n < Number(min)) || (max !== null && n > Number(max))) {
+                    el.classList.add('input-invalid');
+                    valid = false;
+                }
+            }
+        });
+    }
+
+    return valid;
+}
+
+// ─── CONSTRUÇÃO DOS COMANDOS A PARTIR DOS INPUTS ──────────
+function buildCommandsFromInputs() {
+    const cmdMap = {};
+    document.querySelectorAll('[data-cmd]').forEach(el => {
+        const cmd = el.dataset.cmd;
+        const idx = parseInt(el.dataset.idx);
+        if (!cmdMap[cmd]) cmdMap[cmd] = {};
+        cmdMap[cmd][idx] = el.value.trim();
+    });
+
+    const commands = [];
+    for (const cmd of Object.keys(cmdMap)) {
+        const params = cmdMap[cmd];
+        const indices = Object.keys(params).map(Number).sort((a, b) => a - b);
+        const vals = indices.map(i => params[i]);
+
+        const anyFilled = vals.some(v => v !== '');
+        if (!anyFilled) continue;
+
+        const trimmed = [...vals];
+        while (trimmed.length > 0 && trimmed[trimmed.length - 1] === '') trimmed.pop();
+
+        commands.push(`${cmd},${trimmed.join(',')}#`);
+    }
+    return commands;
+}
+
 // ─── CONFIG ACTIONS ───────────────────────────────────────
 async function enviarConfiguracoes() {
     if (!port) { logEntry('error', 'Porta não conectada'); return; }
 
-    const commands = [];
+    if (!validateInputs()) {
+        logEntry('error', 'Campos com valores inválidos. Corrija antes de enviar.');
+        return;
+    }
 
-    const apn = getVal('apn');
-    if (apn) commands.push(`APN,${apn}#`);
-
-    const server1 = getVal('server1');
-    if (server1) commands.push(`SERVER1,${server1}#`);
-
-    const server2 = getVal('server2');
-    if (server2) commands.push(`SERVER2,${server2}#`);
-
-    const timer = getVal('timerTrans');
-    if (timer) commands.push(`TIMER,${timer}#`);
-
-    const angle = getVal('anglesTrans');
-    if (angle) commands.push(`ANGLETMT,${angle}#`);
-
-    const speedBuzz = getVal('speed_buzz');
-    if (speedBuzz) commands.push(`SPEEDBUZZ,${speedBuzz}#`);
-
-    if (dirtyCheckboxes.has('overspeedRelay1')) commands.push(`OVSPDRLY1,${getChecked('overspeedRelay1') ? 1 : 0}#`);
-    if (dirtyCheckboxes.has('overspeedRelay2')) commands.push(`OVSPDRLY2,${getChecked('overspeedRelay2') ? 1 : 0}#`);
-
-    const speedPunish = getVal('speed_punish');
-    if (speedPunish) commands.push(`SPEEDPUNISH,${speedPunish}#`);
-
-    const rfid = getVal('rfid');
-    if (rfid) commands.push(`RFID,${rfid}#`);
-
-    if (dirtyCheckboxes.has('rfidRelay1')) commands.push(`RFIDRLY1,${getChecked('rfidRelay1') ? 1 : 0}#`);
-    if (dirtyCheckboxes.has('rfidRelay2')) commands.push(`RFIDRLY2,${getChecked('rfidRelay2') ? 1 : 0}#`);
-
-    const mileage = getVal('mileage');
-    if (mileage) commands.push(`MILEAGE,${mileage}#`);
-
-    const secsMeter = getVal('secondsMeter');
-    if (secsMeter) commands.push(`SECSMETER,${secsMeter}#`);
-
-    if (dirtyCheckboxes.has('ignVirtual')) commands.push(`ACCLINE,${getChecked('ignVirtual') ? 1 : 0}#`);
+    const commands = buildCommandsFromInputs();
 
     if (commands.length === 0) {
         logEntry('error', 'Nenhum campo preenchido para enviar');
@@ -523,8 +535,7 @@ async function enviarConfiguracoes() {
     const payload = Array.from(new TextEncoder().encode(commands.join('')));
     const frame = buildRS485Message(0x01, payload, 0x01);
     await writeBytes(Array.from(frame));
-    dirtyCheckboxes.clear();
-    logEntry('info', 'Comandos enviados com sucesso');
+    logEntry('info', 'Comandos enviados: ' + commands.map(c => c.replace(/#$/, '')).join(' | '));
 }
 
 async function lerConfiguracoes() {
@@ -532,6 +543,14 @@ async function lerConfiguracoes() {
     recvBuffer = [];
     logEntry('info', 'Solicitando configuração do dispositivo...');
     const payload = Array.from(new TextEncoder().encode('STRUCT#'));
+    const frame = buildRS485Message(0x01, payload, 0x01);
+    await writeBytes(Array.from(frame));
+}
+
+async function sendCommand(cmd) {
+    if (!port) { logEntry('error', 'Porta não conectada'); return; }
+    logEntry('info', `Enviando comando: ${cmd}`);
+    const payload = Array.from(new TextEncoder().encode(cmd));
     const frame = buildRS485Message(0x01, payload, 0x01);
     await writeBytes(Array.from(frame));
 }
@@ -544,12 +563,6 @@ function toggleGroup(header) {
 }
 
 // ─── HELPERS ─────────────────────────────────────────────
-function splitHostPort(str) {
-    const lastComma = str.lastIndexOf(',');
-    if (lastComma === -1) return { host: str, port: 0 };
-    return { host: str.substring(0, lastComma), port: parseInt(str.substring(lastComma + 1)) || 0 };
-}
-
 function hexStringToBytes(str) {
     if (!str) return [];
     return str.split(/\s+/)
@@ -573,8 +586,4 @@ if (!('serial' in navigator)) {
     setTimeout(() => logEntry('error', 'Web Serial API não suportada. Use Chrome ou Edge.'), 100);
 }
 
-['overspeedRelay1', 'overspeedRelay2', 'rfidRelay1', 'rfidRelay2', 'ignVirtual'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener('change', () => { if (!isLoadingConfig) dirtyCheckboxes.add(id); });
-});
 logEntry('info', 'Painel iniciado. Clique em "Conectar" para selecionar a porta serial.');
