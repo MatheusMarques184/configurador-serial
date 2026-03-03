@@ -142,10 +142,8 @@ async function startReadLoop() {
                 if (done) break;
                 if (value) {
                     const bytes = Array.from(value);
-                    recvBytes += bytes.length;
-                    const hex = bytes.map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
-                    logEntry('recv', hex, true);
-                    updateStats();
+                    //logEntry('recv', hex, true);
+                    //updateStats();
                     tryParseConfig(bytes);
                 }
             }
@@ -215,8 +213,6 @@ function colorizeHex(hexStr, type) {
         return bytes.map((b, i) => {
             if (i === 0) return `<span class="byte byte-start">${b}</span>`;
             if (i === n - 1) return `<span class="byte byte-end">${b}</span>`;
-            if (i >= n - 3) return `<span class="byte byte-crc">${b}</span>`;
-            if (i <= 11) return `<span class="byte byte-header">${b}</span>`;
             return `<span class="byte byte-payload">${b}</span>`;
         }).join(' ');
     }
@@ -425,6 +421,8 @@ function tryParseConfig(bytes) {
         const header = unescaped.slice(0, 10);
         const dataLen = (header[8] << 8) | header[9];
 
+        if(header[3] !== 0x99) return;
+
         if (unescaped.length < 10 + dataLen + 2) {
             recvBuffer = recvBuffer.slice(endIdx + 1);
             continue;
@@ -441,10 +439,14 @@ function tryParseConfig(bytes) {
         }
 
         const idMsg = header[4];
-        if (idMsg === 0x11 && dataLen === STRUCT_SIZE) {
+        if (idMsg === 0x01 && dataLen === STRUCT_SIZE) {
+            const frameBytes = recvBuffer.slice(startIdx, endIdx + 1);
+            const hex = frameBytes.map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
+            logEntry('recv', hex, true);
+            recvBytes += frameBytes.length;
+            updateStats();
+            console.log(data);
             deserializeConfig(data);
-        } else {
-            logEntry('info', `Frame recebido: ID=0x${idMsg.toString(16).toUpperCase()}, ${dataLen} bytes`);
         }
 
         recvBuffer = recvBuffer.slice(endIdx + 1);
