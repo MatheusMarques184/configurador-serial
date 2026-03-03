@@ -20,7 +20,7 @@
         <main id="main">
             <div class="commands-panel">
                 <div class="commands-header">
-                    <h2>📋 Configurações de Comando</h2>
+                    <h2>📋 Configurações do dispositivo</h2>
                 </div>
 
                 <div class="commands-body">
@@ -49,23 +49,33 @@
                     <!-- Servidor Principal -->
                     <div class="config-group">
                         <div class="group-header" onclick="toggleGroup(this)">
-                            <span>🌐 Servidor Principal</span>
+                            <span>🌐 Servidor</span>
                             <span class="chevron">▾</span>
                         </div>
                         <div class="group-body">
                             <div class="input-row">
-                                <label>Host/IP</label>
-                                <input type="text" id="server1_host" placeholder="ex: trx.voxd.com.br" data-cmd="SERVER1" data-idx="0" data-required="true">
+                                <label>Host/IP principal</label>
+                                <input type="text" id="server1_host" placeholder="ex: trx.voxd.com.br" data-cmd="SERVER1" data-idx="0">
                             </div>
                             <div class="input-row">
-                                <label>Porta <span class="field-info">0-65535</span></label>
+                                <label>Porta principal<span class="field-info">0-65535</span></label>
                                 <input type="number" id="server1_port" min="0" max="65535" placeholder="9092" data-cmd="SERVER1" data-idx="1">
                             </div>
+
+                            <div class="input-row">
+                                <label>Host/IP secundaria</label>
+                                <input type="text" id="server2_host" placeholder="ex: back.voxd.com.br" data-cmd="SERVER2" data-idx="0">
+                            </div>
+                            <div class="input-row">
+                                <label>Porta secundaria<span class="field-info">0-65535</span></label>
+                                <input type="number" id="server2_port" min="0" max="65535" placeholder="8081" data-cmd="SERVER2" data-idx="1">
+                            </div>
                         </div>
+
                     </div>
 
                     <!-- Servidor Secundário -->
-                    <div class="config-group">
+                    <!-- <div class="config-group">
                         <div class="group-header" onclick="toggleGroup(this)">
                             <span>🌐 Servidor Secundário</span>
                             <span class="chevron">▾</span>
@@ -80,47 +90,7 @@
                                 <input type="number" id="server2_port" min="0" max="65535" placeholder="8081" data-cmd="SERVER2" data-idx="1">
                             </div>
                         </div>
-                    </div>
-
-                    <!-- Transmissão -->
-                    <div class="config-group">
-                        <div class="group-header" onclick="toggleGroup(this)">
-                            <span>⏱ Transmissão</span>
-                            <span class="chevron">▾</span>
-                        </div>
-                        <div class="group-body">
-                            <div class="input-row">
-                                <label>Timer Ignição Ligada <span class="field-info">segundos</span></label>
-                                <input type="number" id="timer_ignon" min="0" max="65535" placeholder="30" data-cmd="TIMER" data-idx="0">
-                            </div>
-                            <div class="input-row">
-                                <label>Timer Ignição Desligada <span class="field-info">segundos</span></label>
-                                <input type="number" id="timer_ignoff" min="0" max="65535" placeholder="1800" data-cmd="TIMER" data-idx="1">
-                            </div>
-                            <div class="input-row">
-                                <label>Ângulo de Transmissão <span class="field-info">graus</span></label>
-                                <input type="number" id="angletmt" min="0" max="255" placeholder="20" data-cmd="ANGLETMT" data-idx="0">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Marcadores -->
-                    <div class="config-group">
-                        <div class="group-header" onclick="toggleGroup(this)">
-                            <span>📊 Marcadores</span>
-                            <span class="chevron">▾</span>
-                        </div>
-                        <div class="group-body">
-                            <div class="input-row">
-                                <label>Odômetro <span class="field-info">centenas metro</span></label>
-                                <input type="number" id="mileage" min="0" max="4294967295" placeholder="200" data-cmd="MILEAGE" data-idx="0">
-                            </div>
-                            <div class="input-row">
-                                <label>Seconds Meter<span class="field-info">segundos</span></label>
-                                <input type="number" id="secsmeter" min="0" max="4294967295" placeholder="0" data-cmd="SECSMETER" data-idx="0">
-                            </div>
-                        </div>
-                    </div>
+                    </div> -->
 
                     <!-- Velocidade -->
                     <div class="config-group">
@@ -178,6 +148,46 @@
                         </div>
                     </div>
 
+                    <!-- Transmissão -->
+                    <div class="config-group">
+                        <div class="group-header" onclick="toggleGroup(this)">
+                            <span>⏱ Transmissão</span>
+                            <span class="chevron">▾</span>
+                        </div>
+                        <div class="group-body">
+                            <div class="input-row">
+                                <label>Timer Ignição Ligada <span class="field-info">segundos</span></label>
+                                <input type="number" id="timer_ignon" min="0" max="65535" placeholder="30" data-cmd="TIMER" data-idx="0">
+                            </div>
+                            <div class="input-row">
+                                <label>Timer Ignição Desligada <span class="field-info">segundos</span></label>
+                                <input type="number" id="timer_ignoff" min="0" max="65535" placeholder="1800" data-cmd="TIMER" data-idx="1">
+                            </div>
+                            <div class="input-row">
+                                <label>Ângulo de Transmissão <span class="field-info">graus</span></label>
+                                <input type="number" id="angletmt" min="0" max="255" placeholder="20" data-cmd="ANGLETMT" data-idx="0">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Marcadores -->
+                    <div class="config-group">
+                        <div class="group-header" onclick="toggleGroup(this)">
+                            <span>📊 Marcadores</span>
+                            <span class="chevron">▾</span>
+                        </div>
+                        <div class="group-body">
+                            <div class="input-row">
+                                <label>Odômetro <span class="field-info">centenas metro</span></label>
+                                <input type="number" id="mileage" min="0" max="4294967295" placeholder="200" data-cmd="MILEAGE" data-idx="0">
+                            </div>
+                            <div class="input-row">
+                                <label>Seconds Meter<span class="field-info">segundos</span></label>
+                                <input type="number" id="secsmeter" min="0" max="4294967295" placeholder="0" data-cmd="SECSMETER" data-idx="0">
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- RFID -->
                     <div class="config-group">
                         <div class="group-header" onclick="toggleGroup(this)">
@@ -205,13 +215,13 @@
                     </div>
 
                     <!-- Relés -->
-                    <div class="config-group">
+                    <div class="config-group off">
                         <div class="group-header" onclick="toggleGroup(this)">
                             <span>🔌 Relés</span>
                             <span class="chevron">▾</span>
                         </div>
                         <div class="group-body">
-                            <div class="input-row">
+                            <div class="input-row off">
                                 <label>Relé 1 - Ativo <span class="field-info">0/1</span></label>
                                 <input type="checkbox" id="relay1_active" data-cmd="RELAY1" data-idx="0" class="toggle"><label class="toggle-label" for="relay1_active"></label>
                             </div>
@@ -223,7 +233,7 @@
                                 <label>Relé 1 - Timestamp</label>
                                 <input type="number" id="relay1_time" min="0" max="4294967295" placeholder="0" data-cmd="RELAY1" data-idx="2">
                             </div>
-                            <div class="input-row">
+                            <div class="input-row off">
                                 <label>Relé 2 - Ativo <span class="field-info">0/1</span></label>
                                 <input type="checkbox" id="relay2_active" data-cmd="RELAY2" data-idx="0" class="toggle"><label class="toggle-label" for="relay2_active"></label>
                             </div>
@@ -265,6 +275,15 @@
                 </div>
 
                 <div class="commands-footer">
+                    <button class="btn btn-preset-save" onclick="openPresetModal('save')">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17,21 17,13 7,13 7,21"/><polyline points="7,3 7,8 15,8"/></svg>
+                        Salvar Preset
+                    </button>
+                    <button class="btn btn-preset-load" onclick="openPresetModal('load')">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                        Carregar Preset
+                    </button>
+                    <div style="flex:1"></div>
                     <button class="btn btn-secondary" onclick="lerConfiguracoes()">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                         Ler do Dispositivo
@@ -277,6 +296,32 @@
             </div>
         </main>
 
+        <!-- MODAL DE PRESET -->
+        <div id="preset-modal" class="preset-modal-overlay" onclick="closePresetModal(event)">
+            <div class="preset-modal">
+                <div class="preset-modal-header">
+                    <span id="preset-modal-title">Preset</span>
+                    <button class="preset-modal-close" onclick="closePresetModal()">&times;</button>
+                </div>
+                <div class="preset-modal-body">
+                    <!-- SAVE MODE -->
+                    <div id="preset-save-panel">
+                        <p class="preset-info">Salva todos os campos configurados (exceto Marcadores) em um preset local no navegador.</p>
+                        <div class="preset-name-row">
+                            <input type="text" id="preset-name-input" placeholder="Nome do preset..." maxlength="40">
+                            <button class="btn btn-primary" onclick="confirmSavePreset()">Salvar</button>
+                        </div>
+                    </div>
+                    <!-- LOAD MODE -->
+                    <div id="preset-load-panel">
+                        <p class="preset-info">Selecione um preset para preencher os campos. Os Marcadores não serão alterados.</p>
+                        <div id="preset-list"></div>
+                        <p id="preset-empty" class="preset-empty">Nenhum preset salvo.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- TERMINAL (REDUZIDO) -->
         <div id="terminal-container">
             <div id="terminal-header">
@@ -284,22 +329,6 @@
                 <button class="btn btn-danger-sm" onclick="clearTerminal()" title="Limpar terminal">🗑️</button>
             </div>
             <div id="terminal-log" onclick="terminalFocus()"></div>
-            <div id="terminal-send-bar">
-                <div class="send-bar-left">
-                    <span class="send-prefix">ID MSG:</span>
-                    <input type="text" id="quick-idmsg" value="0x01" placeholder="0x01" class="hex-input small">
-                    <span class="send-prefix">DEST:</span>
-                    <input type="text" id="quick-dest" value="0x01" placeholder="0x01" class="hex-input small">
-                    <span class="send-prefix">PAYLOAD (hex):</span>
-                    <input type="text" id="quick-payload" placeholder="AA BB CC ..." class="hex-input">
-                </div>
-                <div class="send-bar-right">
-                    <label class="send-opt"><input type="checkbox" id="chk-hex-mode" checked> Montar RS485</label>
-                    <button class="btn btn-send" onclick="sendFromTerminal()">
-                        Enviar ▶
-                    </button>
-                </div>
-            </div>
         </div>
     </div>
 

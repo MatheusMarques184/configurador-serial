@@ -8,7 +8,7 @@ let readLoopActive = false;
 let sentBytes = 0;
 let recvBytes = 0;
 let recvBuffer = [];
-let dirtyCheckboxes = new Set();
+let dirtyInputs = new Set();
 let isLoadingConfig = false;
 
 // ─── RS485 PROTOCOL ───────────────────────────────────────
@@ -271,9 +271,10 @@ function setEl(id, v) {
 }
 
 function setSelectVal(id, v) {
+    if (v != 0) v = 1;
     const el = document.getElementById(id);
     if (!el) return;
-    if (el.type === 'checkbox') { el.checked = (String(v) === '1'); return; }
+    if (el.type === 'checkbox') { el.checked = (String(v) !== '0'); return; }
     const str = String(v);
     for (const opt of el.options) {
         if (opt.value === str) { el.value = str; return; }
@@ -371,18 +372,25 @@ function deserializeConfig(bytes) {
     setEl('speedbuzz', readU8() || '');
 
     setSelectVal('rfid', readU8());
-    readU8();
 
     readBool();
     readU16();
+
     setSelectVal('accline', readBool() ? 1 : 0);
+
     setEl('angletmt', readU8() || '');
+
     setSelectVal('ovspdrly2', readU8());
     setSelectVal('rfidrly2', readU8());
+
     readU8();
+
     setSelectVal('rfidrly1', readU8());
-    readBool();
+
+    readBool(); // rfid modo 2
+
     setSelectVal('ovspdrly1', readBool() ? 1 : 0);
+
     readU8();
     readU32();
 
@@ -398,6 +406,7 @@ function deserializeConfig(bytes) {
     setEl('secsmeter', readU32() || '');
 
     logEntry('info', `Configuração carregada (${STRUCT_SIZE} bytes)`);
+    dirtyInputs.clear();
 }
 
 // ─── PARSE CONFIG DO BUFFER RX ────────────────────────────
@@ -421,7 +430,7 @@ function tryParseConfig(bytes) {
         const header = unescaped.slice(0, 10);
         const dataLen = (header[8] << 8) | header[9];
 
-        if(header[3] !== 0x99) return;
+        if (header[3] !== 0x99) { recvBuffer = recvBuffer.slice(endIdx + 1); continue; }
 
         if (unescaped.length < 10 + dataLen + 2) {
             recvBuffer = recvBuffer.slice(endIdx + 1);
@@ -481,11 +490,20 @@ function validateInputs() {
                 valid = false;
             }
 
+            // numeric bounds
             if (val !== '' && el.type === 'number') {
                 const n = Number(val);
                 const min = el.getAttribute('min');
                 const max = el.getAttribute('max');
                 if ((min !== null && n < Number(min)) || (max !== null && n > Number(max))) {
+                    el.classList.add('input-invalid');
+                    valid = false;
+                }
+            }
+
+            // server host must be either valid IP or domain
+            if ((el.id === 'server1_host' || el.id === 'server2_host') && val !== '') {
+                if (!(isValidIP(val) || isValidDomain(val))) {
                     el.classList.add('input-invalid');
                     valid = false;
                 }
@@ -501,9 +519,10 @@ function buildCommandsFromInputs() {
     const cmdMap = {};
     document.querySelectorAll('[data-cmd]').forEach(el => {
         const cmd = el.dataset.cmd;
+        if (!dirtyInputs.has(cmd)) return;
         const idx = parseInt(el.dataset.idx);
         if (!cmdMap[cmd]) cmdMap[cmd] = {};
-        cmdMap[cmd][idx] = el.type === 'checkbox' ? (el.checked ? '1' : '') : el.value.trim();
+        cmdMap[cmd][idx] = el.type === 'checkbox' ? (el.checked ? '1' : '0') : el.value.trim();
     });
 
     const commands = [];
@@ -544,10 +563,12 @@ async function enviarConfiguracoes() {
     const frame = buildRS485Message(0x01, payload, 0x01);
     await writeBytes(Array.from(frame));
     logEntry('info', 'Comandos enviados: ' + commands.map(c => c.replace(/#$/, '')).join(' | '));
+    dirtyInputs.clear();
 }
 
 async function lerConfiguracoes() {
     if (!port) { logEntry('error', 'Porta não conectada'); return; }
+    dirtyInputs.clear();
     recvBuffer = [];
     logEntry('info', 'Solicitando configuração do dispositivo...');
     const payload = Array.from(new TextEncoder().encode('STRUCT#'));
@@ -579,6 +600,37 @@ function hexStringToBytes(str) {
         .filter(n => !isNaN(n) && n >= 0 && n <= 255);
 }
 
+// ─── IP / DNS VALIDATION HELPERS ─────────────────────────
+function isValidIP(str) {
+    if (typeof str !== 'string') return false;
+    const parts = str.split('.');
+    if (parts.length !== 4) return false;
+    for (const part of parts) {
+        if (!/^[0-9]+$/.test(part)) return false;
+        const num = parseInt(part, 10);
+        if (num < 0 || num > 255) return false;
+        if (part.length > 1 && part[0] === '0') return false; // no leading zeroes
+    }
+    return true;
+}
+
+function isValidDomain(str) {
+    if (typeof str !== 'string') return false;
+    const len = str.length;
+    if (len < 3 || len > 253) return false;
+    if (str[0] === '.' || str[0] === '-' || str[len - 1] === '.' || str[len - 1] === '-') {
+        return false;
+    }
+    const labels = str.split('.');
+    if (labels.length < 2) return false; // must contain at least one dot
+    for (const lbl of labels) {
+        if (lbl.length === 0 || lbl.length > 63) return false;
+        if (!/^[a-zA-Z0-9-]+$/.test(lbl)) return false;
+        if (lbl[0] === '-' || lbl[lbl.length - 1] === '-') return false;
+    }
+    return true;
+}
+
 function parseHexOrDec(str) {
     str = (str || '').trim();
     if (/^0x/i.test(str)) return parseInt(str, 16);
@@ -590,20 +642,48 @@ function clamp16(v) { return Math.max(0, Math.min(65535, v | 0)); }
 function clampU32(v) { return Math.max(0, Math.min(4294967295, v >>> 0)); }
 
 
-// ─── REAL-TIME NUMBER VALIDATION ────────────────────────
+// ─── REAL-TIME NUMBER VALIDATION & DIRTY TRACKING ────────
 document.addEventListener('input', (e) => {
     const el = e.target;
-    if (el.type !== 'number' || !el.hasAttribute('data-cmd')) return;
+    if (!el.hasAttribute('data-cmd')) return;
+    dirtyInputs.add(el.dataset.cmd);
+    // number fields are checked below, but host inputs also need validation
     const val = el.value.trim();
     if (val === '') { el.classList.remove('input-invalid'); setInputError(el, ''); return; }
-    const n = Number(val);
-    const min = el.getAttribute('min');
-    const max = el.getAttribute('max');
-    let msg = '';
-    if (max !== null && n > Number(max)) msg = 'Valor máximo permitido: ' + max;
-    else if (min !== null && n < Number(min)) msg = 'Valor mínimo permitido: ' + min;
-    el.classList.toggle('input-invalid', msg !== '');
-    setInputError(el, msg);
+
+    if (el.type === 'number') {
+        const n = Number(val);
+        const min = el.getAttribute('min');
+        const max = el.getAttribute('max');
+        let msg = '';
+        if (max !== null && n > Number(max)) msg = 'Valor máximo permitido: ' + max;
+        else if (min !== null && n < Number(min)) msg = 'Valor mínimo permitido: ' + min;
+        el.classList.toggle('input-invalid', msg !== '');
+        setInputError(el, msg);
+        return;
+    }
+
+    // live validation for server hostname/IP
+    if (el.id === 'server1_host' || el.id === 'server2_host') {
+        let msg = '';
+        if (val && !(isValidIP(val) || isValidDomain(val))) msg = 'IP/DNS inválido';
+        el.classList.toggle('input-invalid', msg !== '');
+        setInputError(el, msg);
+    }
+});
+
+document.addEventListener('change', (e) => {
+    const el = e.target;
+    if (!el.hasAttribute('data-cmd')) return;
+    dirtyInputs.add(el.dataset.cmd);
+});
+
+document.addEventListener('click', (e) => {
+    const label = e.target.closest('label[for]');
+    if (!label) return;
+    const input = document.getElementById(label.htmlFor);
+    if (!input || !input.hasAttribute('data-cmd')) return;
+    dirtyInputs.add(input.dataset.cmd);
 });
 
 function setInputError(el, msg) {
@@ -613,6 +693,141 @@ function setInputError(el, msg) {
     err.classList.toggle('visible', !!msg);
 }
 
+// ─── PRESET MANAGEMENT ────────────────────────────────────
+const PRESET_STORAGE_KEY = 'rs485_presets';
+const EXCLUDED_CMDS = new Set(['MILEAGE', 'SECSMETER']);
+
+function openPresetModal(mode) {
+    const modal = document.getElementById('preset-modal');
+    const title = document.getElementById('preset-modal-title');
+    const savePanel = document.getElementById('preset-save-panel');
+    const loadPanel = document.getElementById('preset-load-panel');
+
+    if (mode === 'save') {
+        title.textContent = 'Salvar Preset';
+        savePanel.style.display = 'block';
+        loadPanel.style.display = 'none';
+        document.getElementById('preset-name-input').value = '';
+        setTimeout(() => document.getElementById('preset-name-input').focus(), 50);
+    } else {
+        title.textContent = 'Carregar Preset';
+        savePanel.style.display = 'none';
+        loadPanel.style.display = 'block';
+        loadPresetList();
+    }
+
+    modal.classList.add('open');
+}
+
+function closePresetModal(event) {
+    if (event && event.target !== event.currentTarget) return;
+    document.getElementById('preset-modal').classList.remove('open');
+}
+
+function confirmSavePreset() {
+    const name = document.getElementById('preset-name-input').value.trim();
+    if (!name) {
+        logEntry('error', 'Digite um nome para o preset');
+        return;
+    }
+
+    const config = {};
+    document.querySelectorAll('[data-cmd]').forEach(el => {
+        const cmd = el.dataset.cmd;
+        if (EXCLUDED_CMDS.has(cmd)) return;
+        if (!el.id) return;
+
+        if (el.type === 'checkbox') {
+            config[el.id] = el.checked ? '1' : '0';
+        } else {
+            const val = el.value.trim();
+            if (val !== '') config[el.id] = val;
+        }
+    });
+
+    const presets = getPresets();
+    const id = Date.now().toString();
+    presets[id] = { name, date: new Date().toISOString(), config };
+    localStorage.setItem(PRESET_STORAGE_KEY, JSON.stringify(presets));
+    logEntry('info', `Preset "${name}" salvo com sucesso`);
+    document.getElementById('preset-modal').classList.remove('open');
+}
+
+function getPresets() {
+    try { return JSON.parse(localStorage.getItem(PRESET_STORAGE_KEY) || '{}'); }
+    catch { return {}; }
+}
+
+function loadPresetList() {
+    const presets = getPresets();
+    const list = document.getElementById('preset-list');
+    const empty = document.getElementById('preset-empty');
+    list.innerHTML = '';
+
+    const ids = Object.keys(presets).sort((a, b) => b - a);
+
+    if (ids.length === 0) {
+        empty.style.display = 'block';
+        list.style.display = 'none';
+        return;
+    }
+
+    empty.style.display = 'none';
+    list.style.display = 'flex';
+
+    ids.forEach(id => {
+        const preset = presets[id];
+        const date = new Date(preset.date);
+        const dateStr = date.toLocaleDateString('pt-BR') + ' ' + date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+        const item = document.createElement('div');
+        item.className = 'preset-item';
+        item.innerHTML = `
+            <span class="preset-item-name" title="${preset.name}">${preset.name}</span>
+            <span class="preset-item-date">${dateStr}</span>
+            <button class="btn btn-preset-item-load" onclick="loadPreset('${id}')">Carregar</button>
+            <button class="btn btn-preset-item-del" onclick="deletePreset('${id}')" title="Excluir">&#x1F5D1;</button>
+        `;
+        list.appendChild(item);
+    });
+}
+
+function loadPreset(id) {
+    const presets = getPresets();
+    const preset = presets[id];
+    if (!preset) { logEntry('error', 'Preset não encontrado'); return; }
+
+    Object.keys(preset.config).forEach(elId => {
+        const el = document.getElementById(elId);
+        if (!el) return;
+        const val = preset.config[elId];
+        if (el.type === 'checkbox') {
+            el.checked = (val === '1');
+        } else {
+            el.value = val;
+        }
+    });
+
+    logEntry('info', `Preset "${preset.name}" carregado. Clique em "Enviar Configurações" para aplicar.`);
+    document.getElementById('preset-modal').classList.remove('open');
+    dirtyInputs.clear();
+}
+
+function deletePreset(id) {
+    const presets = getPresets();
+    const preset = presets[id];
+    if (!preset) return;
+    if (!confirm(`Excluir preset "${preset.name}"?`)) return;
+    delete presets[id];
+    localStorage.setItem(PRESET_STORAGE_KEY, JSON.stringify(presets));
+    logEntry('info', `Preset "${preset.name}" excluído`);
+    loadPresetList();
+}
+
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') document.getElementById('preset-modal').classList.remove('open');
+});
+
 // ─── INIT ─────────────────────────────────────────────────
 if (!('serial' in navigator)) {
     setTimeout(() => logEntry('error', 'Web Serial API não suportada. Use Chrome ou Edge.'), 100);
@@ -620,6 +835,6 @@ if (!('serial' in navigator)) {
 
 logEntry('info', 'Painel iniciado. Clique em "Conectar" para selecionar a porta serial.');
 
-document.querySelectorAll('input').forEach(el => {
+document.querySelectorAll('input, select').forEach(el => {
     const err = document.createElement('span'); err.className = 'input-error-msg'; el.parentElement.appendChild(err);
 });
