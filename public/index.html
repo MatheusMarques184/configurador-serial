@@ -59,7 +59,7 @@
                             </div>
                             <div class="input-row">
                                 <label>Porta principal<span class="field-info">0-65535</span></label>
-                                <input type="number" id="server1_port" min="0" max="65535" placeholder="9092" data-cmd="SERVER1" data-idx="1">
+                                <input type="number" inputmode="numeric" pattern="[0-9]*" step="1" id="server1_port" min="0" max="65535" placeholder="9092" data-cmd="SERVER1" data-idx="1">
                             </div>
 
                             <div class="input-row">
@@ -68,7 +68,7 @@
                             </div>
                             <div class="input-row">
                                 <label>Porta secundaria<span class="field-info">0-65535</span></label>
-                                <input type="number" id="server2_port" min="0" max="65535" placeholder="8081" data-cmd="SERVER2" data-idx="1">
+                                <input type="number" inputmode="numeric" pattern="[0-9]*" step="1" id="server2_port" min="0" max="65535" placeholder="8081" data-cmd="SERVER2" data-idx="1">
                             </div>
                         </div>
 
@@ -87,7 +87,7 @@
                             </div>
                             <div class="input-row">
                                 <label>Porta <span class="field-info">0-65535</span></label>
-                                <input type="number" id="server2_port" min="0" max="65535" placeholder="8081" data-cmd="SERVER2" data-idx="1">
+                                <input type="number" inputmode="numeric" pattern="[0-9]*" step="1" id="server2_port" min="0" max="65535" placeholder="8081" data-cmd="SERVER2" data-idx="1">
                             </div>
                         </div>
                     </div> -->
@@ -101,15 +101,15 @@
                         <div class="group-body">
                             <div class="input-row">
                                 <label>Speed Buzz <span class="field-info">km/h 0-255</span></label>
-                                <input type="number" id="speedbuzz" min="0" max="255" placeholder="60" data-cmd="SPEEDBUZZ" data-idx="0">
+                                <input type="number" inputmode="numeric" pattern="[0-9]*" step="1" id="speedbuzz" min="0" max="250" placeholder="60" data-cmd="SPEEDBUZZ" data-idx="0">
                             </div>
                             <div class="input-row off">
                                 <label>Speed Timed - Velocidade <span class="field-info">km/h</span></label>
-                                <input type="number" id="speedtimed_speed" min="0" max="255" placeholder="50" data-cmd="SPEEDTIMED" data-idx="0">
+                                <input type="number" inputmode="numeric" pattern="[0-9]*" step="1" id="speedtimed_speed" min="0" max="255" placeholder="50" data-cmd="SPEEDTIMED" data-idx="0">
                             </div>
                             <div class="input-row off">
                                 <label>Speed Timed - Unix Timestamp</label>
-                                <input type="number" id="speedtimed_time" min="0" max="4294967295" placeholder="1768591456" data-cmd="SPEEDTIMED" data-idx="1">
+                                <input type="number" inputmode="numeric" pattern="[0-9]*" step="1" id="speedtimed_time" min="0" max="4294967295" placeholder="1768591456" data-cmd="SPEEDTIMED" data-idx="1">
                             </div>
                             <div class="input-row">
                                 <label>Saída 1 em Overspeed</label>
@@ -131,11 +131,11 @@
                         <div class="group-body">
                             <div class="input-row">
                                 <label>Tempo Acima da Velocidade <span class="field-info">segundos 0-255</span></label>
-                                <input type="number" id="speedpunish_time" min="0" max="255" placeholder="20" data-cmd="SPEEDPUNISH" data-idx="0">
+                                <input type="number" inputmode="numeric" pattern="[0-9]*" step="1" id="speedpunish_time" min="0" max="255" placeholder="20" data-cmd="SPEEDPUNISH" data-idx="0">
                             </div>
                             <div class="input-row">
                                 <label>Tempo de Punição <span class="field-info">segundos 0-255</span></label>
-                                <input type="number" id="speedpunish_duration" min="0" max="255" placeholder="60" data-cmd="SPEEDPUNISH" data-idx="1">
+                                <input type="number" inputmode="numeric" pattern="[0-9]*" step="1" id="speedpunish_duration" min="0" max="255" placeholder="60" data-cmd="SPEEDPUNISH" data-idx="1">
                             </div>
                             <div class="input-row">
                                 <label>Ativar Saída 1 na punição</label>
@@ -157,21 +157,21 @@
                         <div class="group-body">
                             <div class="input-row">
                                 <label>Timer Ignição Ligada <span class="field-info">segundos</span></label>
-                                <input type="number" id="timer_ignon" min="0" max="65535" placeholder="30" data-cmd="TIMER" data-idx="0">
+                                <input type="number" inputmode="numeric" pattern="[0-9]*" step="1" id="timer_ignon" min="0" max="9999" placeholder="30" data-cmd="TIMER" data-idx="0">
                             </div>
                             <div class="input-row">
                                 <label>Timer Ignição Desligada <span class="field-info">segundos</span></label>
-                                <input type="number" id="timer_ignoff" min="0" max="65535" placeholder="1800" data-cmd="TIMER" data-idx="1">
+                                <input type="number" inputmode="numeric" pattern="[0-9]*" step="1" id="timer_ignoff" min="0" max="9999" placeholder="1800" data-cmd="TIMER" data-idx="1">
                             </div>
                             <div class="input-row">
                                 <label>Ângulo de Transmissão <span class="field-info">graus</span></label>
-                                <input type="number" id="angletmt" min="0" max="255" placeholder="20" data-cmd="ANGLETMT" data-idx="0">
+                                <input type="number" inputmode="numeric" pattern="[0-9]*" step="1" id="angletmt" min="0" max="255" placeholder="20" data-cmd="ANGLETMT" data-idx="0">
                             </div>
                         </div>
                     </div>
 
                     <!-- Marcadores -->
-                    <div class="config-group">
+                    <div class="config-group off">
                         <div class="group-header" onclick="toggleGroup(this)">
                             <span>📊 Marcadores</span>
                             <span class="chevron">▾</span>
@@ -179,11 +179,11 @@
                         <div class="group-body">
                             <div class="input-row">
                                 <label>Odômetro <span class="field-info">centenas metro</span></label>
-                                <input type="number" id="mileage" min="0" max="4294967295" placeholder="200" data-cmd="MILEAGE" data-idx="0">
+                                <input type="number" inputmode="numeric" pattern="[0-9]*" step="1" id="mileage" min="0" max="4294967295" placeholder="200" data-cmd="MILEAGE" data-idx="0">
                             </div>
                             <div class="input-row">
                                 <label>Seconds Meter<span class="field-info">segundos</span></label>
-                                <input type="number" id="secsmeter" min="0" max="4294967295" placeholder="0" data-cmd="SECSMETER" data-idx="0">
+                                <input type="number" inputmode="numeric" pattern="[0-9]*" step="1" id="secsmeter" min="0" max="4294967295" placeholder="0" data-cmd="SECSMETER" data-idx="0">
                             </div>
                         </div>
                     </div>
@@ -227,11 +227,11 @@
                             </div>
                             <div class="input-row">
                                 <label>Relé 1 - Tempo de Buzzer <span class="field-info">segundos</span></label>
-                                <input type="number" id="relay1_buzzer" min="0" max="255" placeholder="10" data-cmd="RELAY1" data-idx="1">
+                                <input type="number" inputmode="numeric" pattern="[0-9]*" step="1" id="relay1_buzzer" min="0" max="255" placeholder="10" data-cmd="RELAY1" data-idx="1">
                             </div>
                             <div class="input-row">
                                 <label>Relé 1 - Timestamp</label>
-                                <input type="number" id="relay1_time" min="0" max="4294967295" placeholder="0" data-cmd="RELAY1" data-idx="2">
+                                <input type="number" inputmode="numeric" pattern="[0-9]*" step="1" id="relay1_time" min="0" max="4294967295" placeholder="0" data-cmd="RELAY1" data-idx="2">
                             </div>
                             <div class="input-row off">
                                 <label>Relé 2 - Ativo <span class="field-info">0/1</span></label>
@@ -239,11 +239,11 @@
                             </div>
                             <div class="input-row">
                                 <label>Relé 2 - Tempo de Buzzer <span class="field-info">segundos</span></label>
-                                <input type="number" id="relay2_buzzer" min="0" max="255" placeholder="10" data-cmd="RELAY2" data-idx="1">
+                                <input type="number" inputmode="numeric" pattern="[0-9]*" step="1" id="relay2_buzzer" min="0" max="255" placeholder="10" data-cmd="RELAY2" data-idx="1">
                             </div>
                             <div class="input-row">
                                 <label>Relé 2 - Timestamp</label>
-                                <input type="number" id="relay2_time" min="0" max="4294967295" placeholder="0" data-cmd="RELAY2" data-idx="2">
+                                <input type="number" inputmode="numeric" pattern="[0-9]*" step="1" id="relay2_time" min="0" max="4294967295" placeholder="0" data-cmd="RELAY2" data-idx="2">
                             </div>
                         </div>
                     </div>

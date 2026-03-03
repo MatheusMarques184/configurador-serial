@@ -623,11 +623,20 @@ function isValidDomain(str) {
     }
     const labels = str.split('.');
     if (labels.length < 2) return false; // must contain at least one dot
+    // Reject ambiguous dotted-quad-like strings that mix numeric and alpha labels,
+    // e.g. "123.331.A42.120" should not be accepted as a domain (nor as an IP).
+    if (labels.length === 4) {
+        const anyNumericOnly = labels.some(l => /^[0-9]+$/.test(l));
+        const anyAlpha = labels.some(l => /[A-Za-z]/.test(l));
+        if (anyNumericOnly && anyAlpha) return false;
+    }
+
     for (const lbl of labels) {
         if (lbl.length === 0 || lbl.length > 63) return false;
         if (!/^[a-zA-Z0-9-]+$/.test(lbl)) return false;
         if (lbl[0] === '-' || lbl[lbl.length - 1] === '-') return false;
     }
+
     return true;
 }
 
@@ -670,6 +679,38 @@ document.addEventListener('input', (e) => {
         el.classList.toggle('input-invalid', msg !== '');
         setInputError(el, msg);
     }
+});
+
+// Prevent non-digit keystrokes (e.g. '+', '-', 'e') on number inputs and sanitize paste
+document.addEventListener('keydown', (e) => {
+    const el = e.target;
+    if (!el || el.tagName !== 'INPUT' || el.type !== 'number' || !el.hasAttribute('data-cmd')) return;
+
+    const key = e.key;
+    // Allow control/navigation keys
+    const allowed = ['Backspace','Tab','ArrowLeft','ArrowRight','Delete','Home','End','Enter'];
+    if (allowed.includes(key)) return;
+    // Allow common shortcuts
+    if ((e.ctrlKey || e.metaKey) && /^[acvxzy]$/i.test(key)) return;
+    // Allow digits
+    if (/^[0-9]$/.test(key)) return;
+
+    // Block everything else (including '+', '-', 'e', '.')
+    e.preventDefault();
+});
+
+document.addEventListener('paste', (e) => {
+    const el = e.target;
+    if (!el || el.tagName !== 'INPUT' || el.type !== 'number' || !el.hasAttribute('data-cmd')) return;
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData('text') || '';
+    const cleaned = text.replace(/[^0-9]/g, '');
+    const start = el.selectionStart || 0;
+    const end = el.selectionEnd || 0;
+    const val = el.value || '';
+    const newVal = val.slice(0, start) + cleaned + val.slice(end);
+    el.value = newVal;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
 });
 
 document.addEventListener('change', (e) => {
