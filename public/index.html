@@ -9,7 +9,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
     <style>
         /* Inline styles for command/status message area */
-        .command-msg { padding:6px 10px; border-radius:6px; font-weight:600; min-width:220px; text-align:center; opacity:1; transition: opacity 220ms ease; }
+        .command-msg { padding:6px 10px; height: 31px; border-radius:6px; font-weight:600; min-width:220px; text-align:center; opacity:1; transition: opacity 220ms ease; }
         .command-msg.hidden { opacity: 0; }
         .command-msg.info { background: #2d8cf0; color:#fff; }
         .command-msg.error { background: #e05d5d; color:#fff; }
@@ -269,16 +269,22 @@
                                 <input type="checkbox" id="accline" data-cmd="ACCLINE" data-idx="0" class="toggle"><label class="toggle-label" for="accline"></label>
                             </div>
                             <div class="special-actions">
-                                <button class="btn btn-warning" onclick="sendCommand('RESET#')">
-                                    🔄 Reiniciar Dispositivo
-                                </button>
-                                <button class="btn btn-warning" onclick="sendCommand('CLEARMEM#')">
-                                    🗑️ Limpar Memória de Eventos
-                                </button>
-                                <button class="btn btn-danger" onclick="sendCommand('CLEARCONF#')">
-                                    ⚠️ Voltar Configurações de Fábrica
-                                </button>
-                            </div>
+                                        <button class="btn btn-warning" onclick="openSpecialModal('RESET#','reiniciar dispositivo')">
+                                            🔄 Reiniciar Dispositivo
+                                        </button>
+                                        <button class="btn btn-warning" onclick="openSpecialModal('CLEARMEM#','limpar memória de eventos')">
+                                            🗑️ Limpar Memória de Eventos
+                                        </button>
+                                        <button class="btn btn-warning" onclick="openSpecialModal('MILEAGE,0#','zerar hodometro')">
+                                            🗑️ Zerar hodometro
+                                        </button>
+                                        <button class="btn btn-warning" onclick="openSpecialModal('SECSMETER,0#','zerar seconds meter')">
+                                            🗑️ Zerar seconds meter
+                                        </button>
+                                        <button class="btn btn-danger" onclick="openSpecialModal('CLEARCONF#','voltar configurações de fábrica')">
+                                            ⚠️ Voltar Configurações de Fábrica
+                                        </button>
+                                    </div>
                         </div>
                     </div>
                 </div>
@@ -297,7 +303,7 @@
                         Importar/Exportar Preset
                     </button>
                     <div style="flex:1; display:flex; align-items:center; justify-content:center;">
-                        <div id="command-msg" class="command-msg">-</div>
+                        <div id="command-msg" class="command-msg"></div>
                     </div>
                     <button class="btn btn-secondary" onclick="lerConfiguracoes()">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -412,6 +418,25 @@
             </div>
         </div>
     </div>
+    <footer id="footer" style="height: 15px; width: 100vw;">
+    </footer>
+
+        <!-- CONFIRMAÇÃO DE COMANDOS ESPECIAIS -->
+        <div id="special-confirm-modal" class="preset-modal-overlay" onclick="closeSpecialModal(event)" style="display:none">
+            <div class="preset-modal">
+                <div class="preset-modal-header">
+                    <span>Confirmar Ação</span>
+                    <button class="preset-modal-close" onclick="closeSpecialModal()">&times;</button>
+                </div>
+                <div class="preset-modal-body">
+                    <p id="special-confirm-text">Você tem certeza que deseja ?</p>
+                    <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">
+                        <button class="btn" onclick="closeSpecialModal()">Cancelar</button>
+                        <button class="btn btn-danger" id="special-confirm-btn">Confirmar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
     <script src="js/app.js"></script>
 </body>

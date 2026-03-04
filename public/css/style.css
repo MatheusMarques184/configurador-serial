@@ -153,6 +153,7 @@ input.toggle:checked + .toggle-label::after { transform: translateX(16px); backg
     flex-direction: column;
     overflow: hidden;
     background: var(--bg);
+    max-height: 60vh;
 }
 
 /* ─── CONNECTION BAR ───────────────────────────────────── */
@@ -539,7 +540,8 @@ input.toggle:checked + .toggle-label::after { transform: translateX(16px); backg
 
 #device-info-content {
     flex: 1;
-    overflow-y: auto;
+    /* prevent creating an internal scroll; let the container size to remaining viewport space */
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -551,18 +553,22 @@ input.toggle:checked + .toggle-label::after { transform: translateX(16px); backg
 
 .info-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    grid-template-columns: repeat(2, 1fr);
     gap: 10px;
+    overflow-y: auto;
 }
+
+.info-grid::-webkit-scrollbar { width: 5px; }
+.info-grid::-webkit-scrollbar { height: 3px; }
+.info-grid::-webkit-scrollbar-thumb { background: var(--border2); }
 
 .info-item {
     background: var(--bg2);
     border: 1px solid var(--border);
     border-radius: 6px;
-    padding: 10px;
+    padding: 5px;
     display: flex;
     flex-direction: column;
-    gap: 4px;
 }
 
 .info-item label {
@@ -582,7 +588,8 @@ input.toggle:checked + .toggle-label::after { transform: translateX(16px); backg
 
 #map-container {
     flex: 1;
-    min-height: 200px;
+    /* allow the map to shrink to fit the remaining space without forcing extra height */
+    min-height: 0;
     background: var(--bg2);
     border: 1px solid var(--border);
     border-radius: 6px;
@@ -626,17 +633,17 @@ input.toggle:checked + .toggle-label::after { transform: translateX(16px); backg
 
 @media (max-width: 1280px) {
     .commands-body { grid-template-columns: repeat(2, 1fr); }
-    #main { max-height: calc(72vh - var(--conn-h)); overflow: hidden; }
+    /* #main { max-height: calc(55vh - var(--conn-h)); overflow: hidden; } */
 }
 
 @media (max-width: 900px) {
     .commands-body { grid-template-columns: 1fr; }
-    #main { max-height: calc(62vh - var(--conn-h)); overflow: hidden; }
+    /* #main { max-height: calc(62vh - var(--conn-h)); overflow: hidden; } */
 }
 
 @media (max-width: 560px) {
     .commands-body { grid-template-columns: 1fr; }
-    #main { max-height: calc(52vh - var(--conn-h)); overflow: hidden; }
+    /* #main { max-height: calc(52vh - var(--conn-h)); overflow: hidden; } */
     #connection-bar { height: auto; flex-wrap: wrap; padding: 8px 14px; gap: 8px; }
     #app { overflow-y: auto; }
     html, body { overflow: auto; }
@@ -734,6 +741,7 @@ input.toggle:checked + .toggle-label::after { transform: translateX(16px); backg
 }
 
 .preset-info {
+    font-size: var(--font-sizeP);
     color: var(--text2);
     margin-bottom: 12px;
     line-height: 1.5;

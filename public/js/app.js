@@ -2,6 +2,7 @@ const STRUCT_SIZE = 268;
 const DEVICE_INFO_SIZE = 55; // Status(1) + IMEI(8) + ICCID(8) + Lat(5) + Long(5) + Saida1(1) + Saida2(1) + In+1(1) + In+2(1) + In-1(1) + In-2(1) + Temp(2) + LetraVersao(1) + Version(1) + Subversion(1) + ADC(2) + Reserva(15)
 const ENDERECO_DISPOSITIVO_485 = 0x99;
 const DESTINATARIO_PADRAO = 0x01;
+const timeRequestStruct = 2000; // ms
 
 let port = null;
 let reader = null;
@@ -226,7 +227,7 @@ function startPolling() {
             // send request without toggling flag
             sendStructRequest();
         }
-    }, 1000);
+    }, timeRequestStruct);
 }
 
 function stopPolling() {
@@ -236,8 +237,23 @@ function stopPolling() {
     }
 }
 
+function resetPolling() {
+    if (pollInterval !== null) {
+        clearInterval(pollInterval);
+    }
+    pollInterval = setInterval(() => {
+        if (port) {
+            sendStructRequest();
+        }
+    }, timeRequestStruct);
+}
+
 async function writeBytes(bytes) {
-    if (!port || !port.writable) { logEntry('error', 'Porta não conectada'); return; }
+    if (!port || !port.writable) {
+        console.log('Porta não conectada');
+        showCommandMessage('Porta não conectada', 'error');
+        return;
+    }
     const writer = port.writable.getWriter();
     try {
         await writer.write(new Uint8Array(bytes));
@@ -508,22 +524,22 @@ function parseDeviceInfo(bytes) {
     // console.log("longitude: " + deviceInfo.longitude);
     
     // Saída 1 (1 byte)
-    deviceInfo.saida1 = bytes[offset++];
+    deviceInfo.saida1 = bytes[offset++] ? 'Acionada' : 'Inativa';
     
     // Saída 2 (1 byte)
-    deviceInfo.saida2 = bytes[offset++];
+    deviceInfo.saida2 = bytes[offset++] ? 'Acionada' : 'Inativa';
     
     // Entrada +1 (1 byte)
-    deviceInfo.inPlus1 = bytes[offset++];
+    deviceInfo.inPlus1 = bytes[offset++] ? 'Acionada' : 'Inativa';;
     
     // Entrada +2 (1 byte)
-    deviceInfo.inPlus2 = bytes[offset++];
+    deviceInfo.inPlus2 = bytes[offset++] ? 'Acionada' : 'Inativa';
     
     // Entrada -1 (1 byte)
-    deviceInfo.inMinus1 = bytes[offset++];
+    deviceInfo.inMinus1 = bytes[offset++] ? 'Acionada' : 'Inativa';
     
     // Entrada -2 (1 byte)
-    deviceInfo.inMinus2 = bytes[offset++];
+    deviceInfo.inMinus2 = bytes[offset++] ? 'Acionada' : 'Inativa';
     
     // Temperatura (2 bytes: 1st byte signed integer, 2nd byte unsigned decimal/100)
     const temperatureIntegerPart = (bytes[offset] << 24) >> 24; // sign-extend int8
@@ -555,6 +571,14 @@ function parseDeviceInfo(bytes) {
 }
 
 // ─── UPDATE DEVICE INFO DISPLAY ────────────────────────────
+// Helper: update element text and apply color based on active state
+function updateIOElement(elId, value, activeValue = 'Acionada') {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    el.textContent = value;
+    el.style.color = value === activeValue ? 'var(--green)' : '';
+}
+
 function updateDeviceInfoDisplay() {
     document.getElementById('info-status-conexao').textContent = deviceInfo.statusConexao;
     document.getElementById('info-imei').textContent = deviceInfo.imei.trim() || '-';
@@ -562,21 +586,26 @@ function updateDeviceInfoDisplay() {
     document.getElementById('info-temperatura').textContent = deviceInfo.temperatura;
     document.getElementById('info-versao').textContent = deviceInfo.versao;
     document.getElementById('info-adc').textContent = deviceInfo.adcPCBversion;
-    document.getElementById('info-saida1').textContent = deviceInfo.saida1;
-    document.getElementById('info-saida2').textContent = deviceInfo.saida2;
-    document.getElementById('info-in-plus1').textContent = deviceInfo.inPlus1;
-    document.getElementById('info-in-plus2').textContent = deviceInfo.inPlus2;
-    document.getElementById('info-in-minus1').textContent = deviceInfo.inMinus1;
-    document.getElementById('info-in-minus2').textContent = deviceInfo.inMinus2;
+    
+    // Update I/O elements with conditional coloring
+    const ioItems = [
+        { id: 'info-saida1', value: deviceInfo.saida1 },
+        { id: 'info-saida2', value: deviceInfo.saida2 },
+        { id: 'info-in-plus1', value: deviceInfo.inPlus1 },
+        { id: 'info-in-plus2', value: deviceInfo.inPlus2 },
+        { id: 'info-in-minus1', value: deviceInfo.inMinus1 },
+        { id: 'info-in-minus2', value: deviceInfo.inMinus2 }
+    ];
+    ioItems.forEach(item => updateIOElement(item.id, item.value));
     
     // Update map if coordinates available
     if (deviceInfo.latitude !== null && deviceInfo.longitude !== null) {
         updateMap(deviceInfo.latitude, deviceInfo.longitude);
     }
 }
-
+let firstTimeEL = true;
 // Show a short-lived message in the UI between preset buttons and action buttons
-function showCommandMessage(msg, type = 'info', timeoutMs = 5000) {
+function showCommandMessage(msg, type = 'info', timeoutMs = 2000) {
     const el = document.getElementById('command-msg');
     if (!el) return;
     // clear previous timers
@@ -589,15 +618,21 @@ function showCommandMessage(msg, type = 'info', timeoutMs = 5000) {
 
     // perform fade-out then update text and fade-in to ensure visible change even if same text
     el.classList.add('hidden');
-    // small delay matches CSS transition
-    el._cmdHideTimer = setTimeout(() => {
+
+    if(firstTimeEL){
         el.textContent = msg;
         el.classList.remove('hidden');
-        el._cmdHideTimer = null;
-    }, 220);
-
+        firstTimeEL = false;;
+    }
+   else {
+        el._cmdHideTimer = setTimeout(() => {
+            el.textContent = msg;
+            el.classList.remove('hidden');
+            el._cmdHideTimer = null;
+        }, 220);
+   }
     // if non-error, schedule automatic clear (fade out then clear text)
-    if (timeoutMs > 0 && type !== 'error') {
+    if (timeoutMs > 0) {
         el._cmdClearTimer = setTimeout(() => {
             el.classList.add('hidden');
             // after fade completes, clear content and remove type classes
@@ -704,6 +739,7 @@ function tryParseConfig(bytes) {
                 const structBytes = data.slice(DEVICE_INFO_SIZE);
                 deserializeConfig(structBytes);
                 shouldProcessStruct = false;
+                showCommandMessage('Configurações atualizadas', 'info');
             }
         }
 
@@ -793,7 +829,11 @@ function buildCommandsFromInputs() {
 
 // ─── CONFIG ACTIONS ───────────────────────────────────────
 async function enviarConfiguracoes() {
-    if (!port) { logEntry('error', 'Porta não conectada'); return; }
+    if (!port) { 
+        console.log('Porta não conectada');
+        showCommandMessage('Porta não conectada', 'error');
+        return; 
+    }
 
     if (!validateInputs()) {
         logEntry('error', 'Campos com valores inválidos. Corrija antes de enviar.');
@@ -816,11 +856,9 @@ async function enviarConfiguracoes() {
     const payload = Array.from(new TextEncoder().encode(commands.join('')));
     const frame = buildRS485Message(0x02, payload, 0x01);
 
-    // Pause polling while sending command frame to avoid collisions
-    stopPolling();
+    // Reset polling timer to avoid collision with response
+    resetPolling();
     await writeBytes(Array.from(frame));
-    // Resume polling shortly after send completes
-    setTimeout(() => { if (!pollInterval) startPolling(); }, 700);
 
     const sentSummary = commands.map(c => c.replace(/#$/, '')).join(' | ');
     commands.map(c => console.log('Enviado: ' + c));
@@ -837,30 +875,37 @@ async function enviarConfiguracoes() {
 
 // send the struct request without altering the processing flag
 async function sendStructRequest() {
-    if (!port) { logEntry('error', 'Porta não conectada'); return; }
+    if (!port) { 
+        console.log('Porta não conectada');
+        showCommandMessage('Porta não conectada', 'error'); 
+        return;
+    }
     logEntry('info', 'Solicitando configuração do dispositivo...');
     const payload = Array.from(new TextEncoder().encode('STRUCT#'));
     const frame = buildRS485Message(0x01, payload, 0x01);
-    // pause polling while issuing single command
-    stopPolling();
     await writeBytes(Array.from(frame));
-    setTimeout(() => { if (!pollInterval) startPolling(); }, 700);
 }
 
 async function lerConfiguracoes() {
-    if (!port) { logEntry('error', 'Porta não conectada'); return; }
+    if (!port) { 
+        console.log('Porta não conectada');
+        showCommandMessage('Porta não conectada', 'error');
+        return;
+    }
 
-    showCommandMessage('Configurações atualizadas', 'info', 10000);
     // next struct response should be parsed
     shouldProcessStruct = true;
     dirtyInputs.clear();
     recvBuffer = [];
     await sendStructRequest();
-    showCommandMessage('Configurações atualizadas', 'info', 10000);
 }
 
 async function sendCommand(cmd) {
-    if (!port) { logEntry('error', 'Porta não conectada'); return; }
+    if (!port) { 
+        console.log('Porta não conectada');
+        showCommandMessage('Porta não conectada', 'error');
+        return; 
+    }
     logEntry('info', `Enviando comando: ${cmd}`);
     const payload = Array.from(new TextEncoder().encode(cmd));
     const frame = buildRS485Message(0x01, payload, 0x01);
@@ -1239,3 +1284,36 @@ document.querySelectorAll('input, select').forEach(el => {
 
 // Initialize map
 setTimeout(() => initMap(), 100);
+
+// --- Special command confirmation modal handlers ---
+function openSpecialModal(cmd, label) {
+    if (!port) {
+        console.log('Porta não conectada');
+        showCommandMessage('Porta não conectada', 'error');
+        return;
+    }
+    const modal = document.getElementById('special-confirm-modal');
+    const textEl = document.getElementById('special-confirm-text');
+    const btn = document.getElementById('special-confirm-btn');
+    if (!modal || !textEl || !btn) return;
+    textEl.innerHTML = `Você tem certeza que deseja <span style="text-decoration: underline; color: #e05d5d; font-weight: bold;">${label}</span>?`;
+    // replace click handler
+    btn.onclick = function () {
+        try {
+            sendCommand(cmd);
+            showCommandMessage('Comando enviado', 'info');
+        } catch (e) {
+            console.error('Error sending special command', e);
+            showCommandMessage('Erro ao enviar comando', 'error');
+        }
+        closeSpecialModal();
+    };
+    modal.style.display = 'flex';
+}
+
+function closeSpecialModal(event) {
+    const modal = document.getElementById('special-confirm-modal');
+    if (!modal) return;
+    if (event && event.target && event.target !== modal) return;
+    modal.style.display = 'none';
+}
