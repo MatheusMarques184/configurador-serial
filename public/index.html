@@ -438,6 +438,24 @@
             </div>
         </div>
 
+        <!-- MODAL DE FALHA NO ENVIO -->
+        <div id="retry-failed-modal" class="preset-modal-overlay" onclick="closeRetryFailedModal(event)" style="display:none">
+            <div class="preset-modal">
+                <div class="preset-modal-header">
+                    <span>Falha no Envio</span>
+                    <button class="preset-modal-close" onclick="closeRetryFailedModal()">&times;</button>
+                </div>
+                <div class="preset-modal-body">
+                    <p style="margin-bottom:12px;">O envio das configurações falhou após 3 tentativas. O dispositivo não respondeu corretamente.</p>
+                    <p style="margin-bottom:16px; color:var(--text-dim);">Verifique a conexão serial e tente novamente.</p>
+                    <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:16px;">
+                        <button class="btn" onclick="closeRetryFailedModal()">Fechar</button>
+                        <button class="btn btn-primary" onclick="retryConfigSend()">Tentar Novamente</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     <script src="js/app.js"></script>
 </body>
 </html>

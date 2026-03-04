@@ -19,6 +19,14 @@ let mapMarker = null;
 let pollInterval = null;
 let shouldProcessStruct = false;
 
+// send verification / retry
+const MAX_SEND_RETRIES = 3;
+let verifySnapshot = null;
+let pendingCommands = null;
+let retryAttempt = 0;
+let verifyTimer = null;
+let verifyStructReceived = false;
+
 // Device Info
 let deviceInfo = {
     statusConexao: '-',
@@ -411,8 +419,10 @@ function deserializeConfig(bytes) {
 
     function readStr(maxLen) {
         let s = '';
-        for (let i = 0; i < maxLen; i++)
-            if (buf[o + i] !== 0) s += String.fromCharCode(buf[o + i]);
+        for (let i = 0; i < maxLen; i++) {
+            if (buf[o + i] === 0) break; // <-- para no primeiro null byte
+            s += String.fromCharCode(buf[o + i]);
+        }
         o += maxLen;
         return s;
     }
@@ -576,7 +586,7 @@ function updateIOElement(elId, value, activeValue = 'Acionada') {
     const el = document.getElementById(elId);
     if (!el) return;
     el.textContent = value;
-    el.style.color = value === activeValue ? 'var(--green)' : '';
+    el.style.color = value === activeValue ? 'var(--red-dark)' : '';
 }
 
 function updateDeviceInfoDisplay() {
@@ -739,7 +749,11 @@ function tryParseConfig(bytes) {
                 const structBytes = data.slice(DEVICE_INFO_SIZE);
                 deserializeConfig(structBytes);
                 shouldProcessStruct = false;
-                showCommandMessage('Configurações atualizadas', 'info');
+                if (verifySnapshot !== null) {
+                    onStructVerifyReceived();
+                } else {
+                    showCommandMessage('Configurações atualizadas', 'info');
+                }
             }
         }
 
@@ -829,10 +843,10 @@ function buildCommandsFromInputs() {
 
 // ─── CONFIG ACTIONS ───────────────────────────────────────
 async function enviarConfiguracoes() {
-    if (!port) { 
+    if (!port) {
         console.log('Porta não conectada');
         showCommandMessage('Porta não conectada', 'error');
-        return; 
+        return;
     }
 
     if (!validateInputs()) {
@@ -849,35 +863,142 @@ async function enviarConfiguracoes() {
         return;
     }
 
-    // flag to process next struct response
+    retryAttempt = 0;
+    pendingCommands = commands;
+    verifySnapshot = captureCurrentConfig();
+    await sendConfigWithRetry();
+}
+
+function captureCurrentConfig() {
+    const snapshot = {};
+    document.querySelectorAll('[data-cmd]').forEach(el => {
+        if (!el.id) return;
+        if (el.type === 'checkbox') {
+            snapshot[el.id] = el.checked ? '1' : '0';
+        } else {
+            snapshot[el.id] = el.value.trim();
+        }
+    });
+    return snapshot;
+}
+
+async function sendConfigWithRetry() {
+    if (retryAttempt >= MAX_SEND_RETRIES) {
+        openRetryFailedModal();
+        return;
+    }
+
+    retryAttempt++;
+    verifyStructReceived = false;
     shouldProcessStruct = true;
 
-    logEntry('info', `Enviando ${commands.length} comando(s)...`);
-    const payload = Array.from(new TextEncoder().encode(commands.join('')));
+    const attemptMsg = retryAttempt > 1 ? ` (tentativa ${retryAttempt}/${MAX_SEND_RETRIES})` : '';
+    logEntry('info', `Enviando ${pendingCommands.length} comando(s)${attemptMsg}...`);
+
+    const payload = Array.from(new TextEncoder().encode(pendingCommands.join('')));
     const frame = buildRS485Message(0x02, payload, 0x01);
 
-    // Reset polling timer to avoid collision with response
     resetPolling();
     await writeBytes(Array.from(frame));
 
-    const sentSummary = commands.map(c => c.replace(/#$/, '')).join(' | ');
-    commands.map(c => console.log('Enviado: ' + c));
+    const sentSummary = pendingCommands.map(c => c.replace(/#$/, '')).join(' | ');
+    console.log('Enviado: ' + sentSummary);
 
     const hexDB = Array.from(frame)
         .map(b => b.toString(16).padStart(2, '0').toUpperCase())
         .join(' ');
     console.log(`📦 Frame (${hexDB.length} bytes): ${hexDB}`);
 
-    logEntry('info', 'Comandos enviados: ' + sentSummary);
-    showCommandMessage('Enviados: ' + sentSummary, 'info');
-    dirtyInputs.clear();
+    showCommandMessage(`Enviados: ${sentSummary}${attemptMsg}`, 'info', 0);
+
+    const waitTime = 600 + Math.random() * 300;
+    if (verifyTimer) clearTimeout(verifyTimer);
+    verifyTimer = setTimeout(async () => {
+        if (!verifyStructReceived) {
+            console.log(`Timeout aguardando resposta (tentativa ${retryAttempt})`);
+            logEntry('warn', `Sem resposta na tentativa ${retryAttempt}, reenviando...`);
+            await sendConfigWithRetry();
+        }
+    }, waitTime);
+}
+
+function onStructVerifyReceived() {
+    verifyStructReceived = true;
+    if (verifyTimer) {
+        clearTimeout(verifyTimer);
+        verifyTimer = null;
+    }
+
+    const currentConfig = captureCurrentConfig();
+    let allMatch = true;
+    const mismatches = [];
+
+    for (const key in verifySnapshot) {
+        const expected = verifySnapshot[key];
+        const actual = currentConfig[key];
+        if (expected !== actual) {
+            allMatch = false;
+            mismatches.push(key);
+        }
+    }
+
+    if (allMatch) {
+        console.log(`Verificação bem-sucedida na tentativa ${retryAttempt}`);
+        logEntry('info', `Configurações aplicadas com sucesso (tentativa ${retryAttempt})`);
+        showCommandMessage('Configurações aplicadas com sucesso', 'info');
+        verifySnapshot = null;
+        pendingCommands = null;
+        retryAttempt = 0;
+        dirtyInputs.clear();
+    } else {
+        console.log(`Verificação falhou (tentativa ${retryAttempt}): ${mismatches.length} campo(s) não correspondem`);
+        logEntry('warn', `Verificação falhou (tentativa ${retryAttempt}): campos ${mismatches.join(', ')}`);
+        sendConfigWithRetry();
+    }
+}
+
+function openRetryFailedModal() {
+    const modal = document.getElementById('retry-failed-modal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    logEntry('error', `Falha no envio após ${MAX_SEND_RETRIES} tentativas`);
+    showCommandMessage(`Falha no envio após ${MAX_SEND_RETRIES} tentativas`, 'error', 0);
+}
+
+function closeRetryFailedModal(event) {
+    const modal = document.getElementById('retry-failed-modal');
+    if (!modal) return;
+    if (event && event.target !== modal) return;
+    modal.style.display = 'none';
+    verifySnapshot = null;
+    pendingCommands = null;
+    retryAttempt = 0;
+    if (verifyTimer) {
+        clearTimeout(verifyTimer);
+        verifyTimer = null;
+    }
+}
+
+function retryConfigSend() {
+    const modal = document.getElementById('retry-failed-modal');
+    if (modal) modal.style.display = 'none';
+    if (verifyTimer) {
+        clearTimeout(verifyTimer);
+        verifyTimer = null;
+    }
+    retryAttempt = 0;
+    if (pendingCommands && pendingCommands.length > 0) {
+        sendConfigWithRetry();
+    } else {
+        showCommandMessage('Nenhum comando pendente para reenviar', 'error');
+    }
 }
 
 // send the struct request without altering the processing flag
 async function sendStructRequest() {
-    if (!port) { 
+    if (!port) {
         console.log('Porta não conectada');
-        showCommandMessage('Porta não conectada', 'error'); 
+        showCommandMessage('Porta não conectada', 'error');
         return;
     }
     logEntry('info', 'Solicitando configuração do dispositivo...');
@@ -1015,6 +1136,27 @@ document.addEventListener('keydown', (e) => {
     if (!el || el.tagName !== 'INPUT' || el.type !== 'number' || !el.hasAttribute('data-cmd')) return;
 
     const key = e.key;
+    
+    // Handle ArrowUp and ArrowDown for increment/decrement
+    if (key === 'ArrowUp') {
+        e.preventDefault();
+        const currentVal = parseInt(el.value) || 0;
+        const max = el.getAttribute('max');
+        const newVal = max !== null ? Math.min(currentVal + 1, parseInt(max)) : currentVal + 1;
+        el.value = newVal;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        return;
+    }
+    if (key === 'ArrowDown') {
+        e.preventDefault();
+        const currentVal = parseInt(el.value) || 0;
+        const min = el.getAttribute('min');
+        const newVal = min !== null ? Math.max(currentVal - 1, parseInt(min)) : currentVal - 1;
+        el.value = newVal;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        return;
+    }
+    
     // Allow control/navigation keys
     const allowed = ['Backspace','Tab','ArrowLeft','ArrowRight','Delete','Home','End','Enter'];
     if (allowed.includes(key)) return;
@@ -1296,7 +1438,7 @@ function openSpecialModal(cmd, label) {
     const textEl = document.getElementById('special-confirm-text');
     const btn = document.getElementById('special-confirm-btn');
     if (!modal || !textEl || !btn) return;
-    textEl.innerHTML = `Você tem certeza que deseja <span style="text-decoration: underline; color: #e05d5d; font-weight: bold;">${label}</span>?`;
+    textEl.innerHTML = `Você tem certeza que deseja <span style="text-decoration: underline; color: var(--red-dark); font-weight: bold;">${label}</span>?`;
     // replace click handler
     btn.onclick = function () {
         try {

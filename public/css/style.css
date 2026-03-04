@@ -14,7 +14,8 @@
     --accent-dark: #3a6fd4;
     --green: #50fa7b;
     --green-dark: #3dc060;
-    --red: #ff5555;
+    --red: #ff0000;
+    --red-dark: #b50000;
     --orange: #ffb86c;
     --yellow: #f1fa8c;
     --purple: #bd93f9;
@@ -611,7 +612,8 @@ input.toggle:checked + .toggle-label::after { transform: translateX(16px); backg
 
 /* ensure grid doesn't grow too wide */
 .info-map-wrapper .info-grid {
-    flex: 0 0 320px; /* fixed width for info column */
+    flex: 0 0 40%; /* fixed width for info column */
+    min-width: 370px; /* prevent grid from becoming too narrow */
 }
 
 /* allow map to fill remaining space */
