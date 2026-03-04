@@ -12,7 +12,7 @@
         .command-msg { padding:6px 10px; height: 31px; border-radius:6px; font-weight:600; min-width:220px; text-align:center; opacity:1; transition: opacity 220ms ease; }
         .command-msg.hidden { opacity: 0; }
         .command-msg.info { background: #2d8cf0; color:#fff; }
-        .command-msg.error { background: #e05d5d; color:#fff; }
+        .command-msg.error { background: var(--red-dark); color:#fff; }
     </style>
 </head>
 <body>
@@ -363,7 +363,7 @@
             <div id="device-info-content">
                 <div class="info-map-wrapper">
                     <div class="info-grid">
-                        <div class="info-item">
+                        <div class="info-item info-item-span2">
                             <label>Status Conexão</label>
                             <span id="info-status-conexao" class="info-value">-</span>
                         </div>
@@ -375,7 +375,7 @@
                             <label>ICCID</label>
                             <span id="info-iccid" class="info-value">-</span>
                         </div>
-                        <div class="info-item">
+                        <div class="info-item off">
                             <label>Temperatura</label>
                             <span id="info-temperatura" class="info-value">-</span>
                         </div>

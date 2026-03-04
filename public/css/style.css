@@ -14,7 +14,7 @@
     --accent-dark: #3a6fd4;
     --green: #50fa7b;
     --green-dark: #3dc060;
-    --red: #ff0000;
+    --red: #b50000;
     --red-dark: #b50000;
     --orange: #ffb86c;
     --yellow: #f1fa8c;
@@ -507,7 +507,7 @@ input.toggle:checked + .toggle-label::after { transform: translateX(16px); backg
 .btn-warning:hover { background: rgba(255, 184, 108, 0.2); border-color: var(--orange); }
 
 .btn-danger {
-    background: rgba(255, 85, 85, 0.1);
+    background: rgba(255, 85, 85, 0.15);
     color: var(--red);
     border: 1px solid rgba(255, 85, 85, 0.35);
 }
@@ -571,6 +571,8 @@ input.toggle:checked + .toggle-label::after { transform: translateX(16px); backg
     display: flex;
     flex-direction: column;
 }
+
+.info-item.info-item-span2 { grid-column: span 2; }
 
 .info-item label {
     font-size: var(--font-sizeP);
