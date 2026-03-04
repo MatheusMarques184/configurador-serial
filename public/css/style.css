@@ -528,8 +528,8 @@ input.toggle:checked + .toggle-label::after { transform: translateX(16px); backg
 .input-error-msg.visible { visibility: visible; }
 
 
-/* ─── TERMINAL CONTAINER ─────────────────────────────────── */
-#terminal-container {
+/* ─── DEVICE INFO CONTAINER ─────────────────────────────── */
+#device-info-container {
     flex: 1;
     min-height: 0;
     display: flex;
@@ -537,17 +537,79 @@ input.toggle:checked + .toggle-label::after { transform: translateX(16px); backg
     border-top: 1px solid var(--border);
 }
 
-#terminal-header {
+#device-info-content {
+    flex: 1;
+    overflow-y: auto;
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 5px 12px;
-    background: var(--bg3);
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px;
+}
+
+#device-info-content::-webkit-scrollbar { width: 5px; }
+#device-info-content::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+}
+
+.info-item {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.info-item label {
     font-size: var(--font-sizeP);
-    font-weight: 600;
     color: var(--text2);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.info-value {
+    color: var(--accent);
+    font-family: var(--font-mono);
+    word-break: break-all;
+    min-height: 18px;
+}
+
+#map-container {
+    flex: 1;
+    min-height: 200px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-top: 0; /* spacing handled by wrapper */
+}
+
+#map {
+    width: 100%;
+    height: 100%;
+}
+
+/* wrapper that holds info grid and map side-by-side */
+.info-map-wrapper {
+    display: flex;
+    gap: 12px;
+    height: 100%;
+}
+
+/* ensure grid doesn't grow too wide */
+.info-map-wrapper .info-grid {
+    flex: 0 0 320px; /* fixed width for info column */
+}
+
+/* allow map to fill remaining space */
+.info-map-wrapper #map-container {
+    flex: 1;
 }
 
 .off {
@@ -600,6 +662,31 @@ input.toggle:checked + .toggle-label::after { transform: translateX(16px); backg
 }
 .btn-preset-load:hover { background: rgba(139, 233, 253, 0.2); border-color: var(--cyan); }
 
+.btn-preset-io {
+    background: var(--bg4);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--text2);
+    padding: 6px 10px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.btn-preset-io:hover { background: rgba(255, 255, 255, 0.1); border-color: var(--accent); color: var(--text); }
+
+#preset-io-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+#preset-io-panel .io-section {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
 .preset-modal-overlay {
     display: none;
     position: fixed;
@@ -647,7 +734,6 @@ input.toggle:checked + .toggle-label::after { transform: translateX(16px); backg
 }
 
 .preset-info {
-    font-size: var(--font-sizeP);
     color: var(--text2);
     margin-bottom: 12px;
     line-height: 1.5;
@@ -709,6 +795,17 @@ input.toggle:checked + .toggle-label::after { transform: translateX(16px); backg
     flex-shrink: 0;
 }
 .btn-preset-item-load:hover { background: rgba(79, 142, 247, 0.3); }
+
+/* import/export buttons inside preset modal */
+.preset-import-export {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+.preset-import-export .btn {
+    flex-shrink: 0;
+}
 
 .btn-preset-item-del {
     background: rgba(255, 85, 85, 0.1);

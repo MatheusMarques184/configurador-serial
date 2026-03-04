@@ -5,6 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel Serial RS485</title>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <style>
+        /* Inline styles for command/status message area */
+        .command-msg { padding:6px 10px; border-radius:6px; font-weight:600; min-width:220px; text-align:center; opacity:1; transition: opacity 220ms ease; }
+        .command-msg.hidden { opacity: 0; }
+        .command-msg.info { background: #2d8cf0; color:#fff; }
+        .command-msg.error { background: #e05d5d; color:#fff; }
+    </style>
 </head>
 <body>
     <div id="app">
@@ -283,7 +292,13 @@
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
                         Carregar Preset
                     </button>
-                    <div style="flex:1"></div>
+                    <button class="btn btn-preset-io" onclick="openPresetModal('io')">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/><polyline points="7,11 12,16 17,11"/><line x1="12" y1="7" x2="12" y2="17"/></svg>
+                        Importar/Exportar Preset
+                    </button>
+                    <div style="flex:1; display:flex; align-items:center; justify-content:center;">
+                        <div id="command-msg" class="command-msg">-</div>
+                    </div>
                     <button class="btn btn-secondary" onclick="lerConfiguracoes()">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                         Ler do Dispositivo
@@ -318,17 +333,83 @@
                         <div id="preset-list"></div>
                         <p id="preset-empty" class="preset-empty">Nenhum preset salvo.</p>
                     </div>
+                    <!-- IO MODE (import/export) -->
+                    <div id="preset-io-panel" class="preset-import-export" style="display:none">
+                        <div class="io-section">
+                            <p class="preset-info">Exporta todos os presets para um arquivo JSON.</p>
+                            <button class="btn btn-primary" onclick="exportPresets()">Exportar Presets</button>
+                        </div>
+                        <div class="io-section">
+                            <p class="preset-info">Importa presets de um arquivo JSON.</p>
+                            <button class="btn btn-primary" onclick="document.getElementById('import-presets-file').click()">Importar Presets</button>
+                            <input type="file" id="import-presets-file" accept=".json" style="display:none" onchange="handleImportPresets(event)">
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- TERMINAL (REDUZIDO) -->
-        <div id="terminal-container">
-            <div id="terminal-header">
-                <span>📡 Terminal Serial</span>
-                <button class="btn btn-danger-sm" onclick="clearTerminal()" title="Limpar terminal">🗑️</button>
+        <!-- PAINEL DE INFORMAÇÕES: Status do Dispositivo -->
+        <div id="device-info-container">
+            <div class="group-header">
+                <span>📱 Status do Dispositivo</span>
             </div>
-            <div id="terminal-log" onclick="terminalFocus()"></div>
+            <div id="device-info-content">
+                <div class="info-map-wrapper">
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <label>Status Conexão</label>
+                            <span id="info-status-conexao" class="info-value">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>IMEI</label>
+                            <span id="info-imei" class="info-value">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>ICCID</label>
+                            <span id="info-iccid" class="info-value">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Temperatura</label>
+                            <span id="info-temperatura" class="info-value">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Versão</label>
+                            <span id="info-versao" class="info-value">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Pino ADC</label>
+                            <span id="info-adc" class="info-value">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Saída 1</label>
+                            <span id="info-saida1" class="info-value">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Saída 2</label>
+                            <span id="info-saida2" class="info-value">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Entrada +1</label>
+                            <span id="info-in-plus1" class="info-value">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Entrada +2</label>
+                            <span id="info-in-plus2" class="info-value">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Entrada -1</label>
+                            <span id="info-in-minus1" class="info-value">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Entrada -2</label>
+                            <span id="info-in-minus2" class="info-value">-</span>
+                        </div>
+                    </div>
+                    <div id="map-container">
+                        <div id="map"></div>
+                </div>
+            </div>
         </div>
     </div>
 

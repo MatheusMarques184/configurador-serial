@@ -1,4 +1,5 @@
 const STRUCT_SIZE = 268;
+const DEVICE_INFO_SIZE = 55; // Status(1) + IMEI(8) + ICCID(8) + Lat(5) + Long(5) + Saida1(1) + Saida2(1) + In+1(1) + In+2(1) + In-1(1) + In-2(1) + Temp(2) + LetraVersao(1) + Version(1) + Subversion(1) + ADC(2) + Reserva(15)
 const ENDERECO_DISPOSITIVO_485 = 0x99;
 const DESTINATARIO_PADRAO = 0x01;
 
@@ -10,6 +11,30 @@ let recvBytes = 0;
 let recvBuffer = [];
 let dirtyInputs = new Set();
 let isLoadingConfig = false;
+let map = null;
+let mapMarker = null;
+
+// polling/struct control
+let pollInterval = null;
+let shouldProcessStruct = false;
+
+// Device Info
+let deviceInfo = {
+    statusConexao: '-',
+    imei: '-',
+    iccid: '-',
+    temperatura: '-',
+    versao: '-',
+    adcPCBversion: '-',
+    latitude: null,
+    longitude: null,
+    saida1: '-',
+    saida2: '-',
+    inPlus1: '-',
+    inPlus2: '-',
+    inMinus1: '-',
+    inMinus2: '-'
+};
 
 // ─── RS485 PROTOCOL ───────────────────────────────────────
 // Spec: START(0x01) + Header(10) + Data + CRC(2) + END(0x04)
@@ -107,6 +132,10 @@ async function connectSerial() {
         logEntry('info', 'Porta serial conectada');
         document.getElementById('btn-connect').textContent = 'Desconectar';
         document.getElementById('btn-connect').classList.add('connected');
+        
+        // on first connection we want to process the next struct
+        shouldProcessStruct = true;
+        startPolling();
         startReadLoop();
         setTimeout(() => lerConfiguracoes(), 500);
     } catch (e) {
@@ -120,6 +149,7 @@ async function connectSerial() {
 
 async function disconnectSerial() {
     readLoopActive = false;
+    stopPolling();
     try {
         if (reader) { await reader.cancel(); reader = null; }
         if (port) { await port.close(); }
@@ -130,6 +160,36 @@ async function disconnectSerial() {
     document.getElementById('btn-connect').textContent = 'Conectar';
     document.getElementById('btn-connect').classList.remove('connected');
     updateStats();
+    
+    // Reset device info
+    deviceInfo = {
+        statusConexao: '-',
+        imei: '-',
+        iccid: '-',
+        temperatura: '-',
+        versao: '-',
+        adcPCBversion: '-',
+        latitude: null,
+        longitude: null,
+        saida1: '-',
+        saida2: '-',
+        inPlus1: '-',
+        inPlus2: '-',
+        inMinus1: '-',
+        inMinus2: '-'
+    };
+    updateDeviceInfoDisplay();
+    
+    // Clear all configuration inputs
+    document.querySelectorAll('[data-cmd]').forEach(el => {
+        if (el.type === 'checkbox') {
+            el.checked = false;
+        } else {
+            el.value = '';
+        }
+        el.classList.remove('input-invalid');
+    });
+    dirtyInputs.clear();
 }
 
 async function startReadLoop() {
@@ -155,6 +215,25 @@ async function startReadLoop() {
         }
     }
     if (port) disconnectSerial();
+}
+
+// ─── POLLING HELPERS ─────────────────────────────────────
+function startPolling() {
+    if (pollInterval !== null) return;
+    // request struct every second (does not set processing flag)
+    pollInterval = setInterval(() => {
+        if (port) {
+            // send request without toggling flag
+            sendStructRequest();
+        }
+    }, 1000);
+}
+
+function stopPolling() {
+    if (pollInterval !== null) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+    }
 }
 
 async function writeBytes(bytes) {
@@ -191,69 +270,36 @@ function loadPorts() {
 
 // ─── TERMINAL LOG ─────────────────────────────────────────
 function logEntry(type, text, isHex = false) {
-    const log = document.getElementById('terminal-log');
-    const entry = document.createElement('div');
-    entry.className = 'log-entry';
-    const now = new Date();
-    const time = now.toTimeString().substring(0, 8) + '.' + String(now.getMilliseconds()).padStart(3, '0');
-    const typeLabels = { sent: 'TX', recv: 'RX', info: 'INFO', error: 'ERR' };
-    entry.innerHTML = `
-        <span class="log-time">${time}</span>
-        <span class="log-type ${type}">${typeLabels[type] || type}</span>
-        <span class="log-hex">${isHex ? colorizeHex(text, type) : escapeHtml(text)}</span>
-    `;
-    log.appendChild(entry);
-    log.scrollTop = log.scrollHeight;
-}
-
-function colorizeHex(hexStr, type) {
-    const bytes = hexStr.split(' ');
-    const n = bytes.length;
-    if ((type === 'sent' || type === 'recv') && n >= 13) {
-        return bytes.map((b, i) => {
-            if (i === 0) return `<span class="byte byte-start">${b}</span>`;
-            if (i === n - 1) return `<span class="byte byte-end">${b}</span>`;
-            return `<span class="byte byte-payload">${b}</span>`;
-        }).join(' ');
-    }
-    return `<span class="byte">${bytes.join(' </span><span class="byte">')}</span>`;
-}
-
-function escapeHtml(s) {
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-function clearTerminal() {
-    document.getElementById('terminal-log').innerHTML = '';
-}
-
-function terminalFocus() {
-    document.getElementById('quick-payload').focus();
+    // Terminal log disabled - moved to device info display
+    //console.log(`[${type}] ${text}`);
 }
 
 // ─── SEND FROM TERMINAL BAR ───────────────────────────────
-async function sendFromTerminal() {
-    if (!port) { logEntry('error', 'Porta não conectada'); return; }
-    const useRS485 = document.getElementById('chk-hex-mode').checked;
-    const payloadStr = document.getElementById('quick-payload').value.trim();
-    if (useRS485) {
-        const idMsg = parseHexOrDec(document.getElementById('quick-idmsg').value.trim());
-        const dest = parseHexOrDec(document.getElementById('quick-dest').value.trim());
-        const payload = hexStringToBytes(payloadStr);
-        const frame = buildRS485Message(idMsg, payload, dest);
-        await writeBytes(Array.from(frame));
-    } else {
-        const rawBytes = hexStringToBytes(payloadStr);
-        if (rawBytes.length === 0) { logEntry('error', 'Nenhum byte para enviar'); return; }
-        await writeBytes(rawBytes);
-    }
-}
+// async function sendFromTerminal() {
+//     if (!port) { logEntry('error', 'Porta não conectada'); return; }
+//     const useRS485 = document.getElementById('chk-hex-mode').checked;
+//     const payloadStr = document.getElementById('quick-payload').value.trim();
+//     if (useRS485) {
+//         const idMsg = parseHexOrDec(document.getElementById('quick-idmsg').value.trim());
+//         const dest = parseHexOrDec(document.getElementById('quick-dest').value.trim());
+//         const payload = hexStringToBytes(payloadStr);
+//         const frame = buildRS485Message(idMsg, payload, dest);
+//         // pause polling during manual RS485 send
+//         stopPolling();
+//         await writeBytes(Array.from(frame));
+//         setTimeout(() => { if (!pollInterval) startPolling(); }, 700);
+//     } else {
+//         const rawBytes = hexStringToBytes(payloadStr);
+//         if (rawBytes.length === 0) { logEntry('error', 'Nenhum byte para enviar'); return; }
+//         await writeBytes(rawBytes);
+//     }
+// }
 
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && document.activeElement.id === 'quick-payload') {
-        sendFromTerminal();
-    }
-});
+// document.addEventListener('keydown', (e) => {
+//     if (e.key === 'Enter' && document.activeElement.id === 'quick-payload') {
+//         sendFromTerminal();
+//     }
+// });
 
 // ─── HELPERS DE LEITURA DE CAMPOS ────────────────────────
 function getVal(id) {
@@ -409,6 +455,196 @@ function deserializeConfig(bytes) {
     dirtyInputs.clear();
 }
 
+// ─── STATUS CONEXAO ENUM ──────────────────────────────────
+const GSM_STATUS_MAP = {
+    0: 'Início',
+    1: 'Power Up',
+    2: 'Comandos Iniciais',
+    3: 'Verificando SIM',
+    4: 'Buscando Rede',
+    5: 'Tentando Conectar',
+    6: 'Aguardando Conexão',
+    7: 'Preparando Transmissão',
+    8: 'Transmitindo Infos',
+    9: 'Transmitindo Tracking',
+    10: 'Transmitindo Memória',
+    11: 'Conectado Ackado',
+    12: 'Resetando Modem',
+    13: 'Chip Ausente'
+};
+
+// ─── PARSE DEVICE INFO ────────────────────────────────────
+function parseDeviceInfo(bytes) {
+    if (bytes.length < DEVICE_INFO_SIZE) return;
+    
+    let offset = 0;
+    
+    const statusValue = bytes[offset++];
+    deviceInfo.statusConexao = GSM_STATUS_MAP[statusValue] || `Desconhecido (${statusValue})`;
+
+    const bytesView = new Uint8Array(bytes);
+    const view = new DataView(bytesView.buffer, bytesView.byteOffset);
+    
+    deviceInfo.imei = view.getBigUint64(offset).toString().padStart(16, '0');
+    offset += 8;
+
+    deviceInfo.iccid = "89" + view.getBigUint64(offset).toString().padStart(16, '0');
+    offset += 8;
+    
+    const latBytes = new Uint8Array(8); // 8 bytes zerados
+    latBytes.set(bytes.slice(offset, offset + 5), 0); // copia 5 bytes no início
+    const latitude = new DataView(latBytes.buffer).getFloat64(0, false);
+    if (latitude !== 0) deviceInfo.latitude = latitude;
+    offset += 5;
+
+    // Longitude
+    const lonBytes = new Uint8Array(8);
+    lonBytes.set(bytes.slice(offset, offset + 5), 0);
+    const longitude = new DataView(lonBytes.buffer).getFloat64(0, false);
+    if (longitude !== 0) deviceInfo.longitude = longitude;
+    offset += 5;
+
+    // console.log("latitude: " + deviceInfo.latitude);
+    // console.log("longitude: " + deviceInfo.longitude);
+    
+    // Saída 1 (1 byte)
+    deviceInfo.saida1 = bytes[offset++];
+    
+    // Saída 2 (1 byte)
+    deviceInfo.saida2 = bytes[offset++];
+    
+    // Entrada +1 (1 byte)
+    deviceInfo.inPlus1 = bytes[offset++];
+    
+    // Entrada +2 (1 byte)
+    deviceInfo.inPlus2 = bytes[offset++];
+    
+    // Entrada -1 (1 byte)
+    deviceInfo.inMinus1 = bytes[offset++];
+    
+    // Entrada -2 (1 byte)
+    deviceInfo.inMinus2 = bytes[offset++];
+    
+    // Temperatura (2 bytes: 1st byte signed integer, 2nd byte unsigned decimal/100)
+    const temperatureIntegerPart = (bytes[offset] << 24) >> 24; // sign-extend int8
+    offset++;
+    const temperatureDecimalPart = bytes[offset++];
+    if (temperatureIntegerPart >= 0) {
+        deviceInfo.temperatura = (temperatureIntegerPart + (temperatureDecimalPart / 100)).toFixed(2) + ' °C';
+    } else {
+        deviceInfo.temperatura = (temperatureIntegerPart - (temperatureDecimalPart / 100)).toFixed(2) + ' °C';
+    }
+    
+    // LetraVersao (1 byte)
+    const letraVersao = String.fromCharCode(bytes[offset++]);
+    // Version (1 byte)
+    const version = bytes[offset++];
+    // Subversion (1 byte)
+    const subversion = bytes[offset++];
+    // Construct versao string
+    deviceInfo.versao = letraVersao + version + '.' + subversion;
+    
+    // adcPCBversion (2 bytes) - unsigned 16-bit
+    const adcRaw = (bytes[offset++] << 8) | bytes[offset++];
+    deviceInfo.adcPCBversion = adcRaw;
+    
+    // Skip remaining 15 bytes of reserved space
+    offset += 15;
+    
+    updateDeviceInfoDisplay();
+}
+
+// ─── UPDATE DEVICE INFO DISPLAY ────────────────────────────
+function updateDeviceInfoDisplay() {
+    document.getElementById('info-status-conexao').textContent = deviceInfo.statusConexao;
+    document.getElementById('info-imei').textContent = deviceInfo.imei.trim() || '-';
+    document.getElementById('info-iccid').textContent = deviceInfo.iccid.trim() || '-';
+    document.getElementById('info-temperatura').textContent = deviceInfo.temperatura;
+    document.getElementById('info-versao').textContent = deviceInfo.versao;
+    document.getElementById('info-adc').textContent = deviceInfo.adcPCBversion;
+    document.getElementById('info-saida1').textContent = deviceInfo.saida1;
+    document.getElementById('info-saida2').textContent = deviceInfo.saida2;
+    document.getElementById('info-in-plus1').textContent = deviceInfo.inPlus1;
+    document.getElementById('info-in-plus2').textContent = deviceInfo.inPlus2;
+    document.getElementById('info-in-minus1').textContent = deviceInfo.inMinus1;
+    document.getElementById('info-in-minus2').textContent = deviceInfo.inMinus2;
+    
+    // Update map if coordinates available
+    if (deviceInfo.latitude !== null && deviceInfo.longitude !== null) {
+        updateMap(deviceInfo.latitude, deviceInfo.longitude);
+    }
+}
+
+// Show a short-lived message in the UI between preset buttons and action buttons
+function showCommandMessage(msg, type = 'info', timeoutMs = 5000) {
+    const el = document.getElementById('command-msg');
+    if (!el) return;
+    // clear previous timers
+    if (el._cmdClearTimer) { clearTimeout(el._cmdClearTimer); el._cmdClearTimer = null; }
+    if (el._cmdHideTimer) { clearTimeout(el._cmdHideTimer); el._cmdHideTimer = null; }
+
+    // set type class
+    el.classList.remove('info', 'error');
+    el.classList.add(type === 'error' ? 'error' : 'info');
+
+    // perform fade-out then update text and fade-in to ensure visible change even if same text
+    el.classList.add('hidden');
+    // small delay matches CSS transition
+    el._cmdHideTimer = setTimeout(() => {
+        el.textContent = msg;
+        el.classList.remove('hidden');
+        el._cmdHideTimer = null;
+    }, 220);
+
+    // if non-error, schedule automatic clear (fade out then clear text)
+    if (timeoutMs > 0 && type !== 'error') {
+        el._cmdClearTimer = setTimeout(() => {
+            el.classList.add('hidden');
+            // after fade completes, clear content and remove type classes
+            el._cmdClearTimer = setTimeout(() => {
+                if (el.textContent === msg) {
+                    el.textContent = '';
+                    el.classList.remove('info', 'error');
+                }
+                el._cmdClearTimer = null;
+            }, 240);
+        }, timeoutMs);
+    }
+}
+
+// ─── MAP FUNCTIONS ────────────────────────────────────────
+function initMap() {
+    const mapContainer = document.getElementById('map');
+    if (!mapContainer || map) return;
+    
+    // Default center (e.g., São Paulo, Brazil)
+    const defaultLat = -23.42528;
+    const defaultLng = -51.93861;
+    
+    map = L.map('map').setView([defaultLat, defaultLng], 13);
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19,
+        tileSize: 256
+    }).addTo(map);
+}
+
+function updateMap(lat, lng) {
+    if (!map) initMap();
+    
+    // Move map center
+    map.setView([lat, lng], 15);
+    
+    // Remove old marker
+    if (mapMarker) map.removeLayer(mapMarker);
+    
+    // Add new marker
+    mapMarker = L.marker([lat, lng]).addTo(map)
+        .bindPopup(`<b>Localização do Dispositivo</b><br>Lat: ${lat.toFixed(6)}<br>Lng: ${lng.toFixed(6)}`)
+        .openPopup();
+}
+
 // ─── PARSE CONFIG DO BUFFER RX ────────────────────────────
 function tryParseConfig(bytes) {
     recvBuffer = recvBuffer.concat(bytes);
@@ -421,14 +657,19 @@ function tryParseConfig(bytes) {
         if (endIdx === -1) { recvBuffer = recvBuffer.slice(startIdx); break; }
 
         const unescaped = removeEscape(recvBuffer.slice(startIdx + 1, endIdx));
-
+        
         if (unescaped.length < 12) {
             recvBuffer = recvBuffer.slice(endIdx + 1);
             continue;
         }
 
         const header = unescaped.slice(0, 10);
-        const dataLen = (header[8] << 8) | header[9];
+        let dataLen = (header[8] << 8) | header[9];
+        //dataLen = dataLen + DEVICE_INFO_SIZE;
+
+        // console.log("header: " + header);
+        // console.log("dataLen: " + dataLen);
+        // console.log("unescaped: " + unescaped);
 
         if (header[3] !== 0x99) { recvBuffer = recvBuffer.slice(endIdx + 1); continue; }
 
@@ -448,14 +689,22 @@ function tryParseConfig(bytes) {
         }
 
         const idMsg = header[4];
-        if (idMsg === 0x01 && dataLen === STRUCT_SIZE) {
+        if (idMsg === 0x01 && dataLen === (DEVICE_INFO_SIZE + STRUCT_SIZE)) {
+            // always update device info; struct parameters only when flag is true
             const frameBytes = recvBuffer.slice(startIdx, endIdx + 1);
             const hex = frameBytes.map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
             logEntry('recv', hex, true);
             recvBytes += frameBytes.length;
             updateStats();
-            console.log(data);
-            deserializeConfig(data);
+            
+            const deviceInfoBytes = data.slice(0, DEVICE_INFO_SIZE);
+            parseDeviceInfo(deviceInfoBytes);
+            
+            if (shouldProcessStruct) {
+                const structBytes = data.slice(DEVICE_INFO_SIZE);
+                deserializeConfig(structBytes);
+                shouldProcessStruct = false;
+            }
         }
 
         recvBuffer = recvBuffer.slice(endIdx + 1);
@@ -548,6 +797,7 @@ async function enviarConfiguracoes() {
 
     if (!validateInputs()) {
         logEntry('error', 'Campos com valores inválidos. Corrija antes de enviar.');
+        showCommandMessage('Campos com valores inválidos. Corrija antes de enviar.', 'error');
         return;
     }
 
@@ -555,25 +805,58 @@ async function enviarConfiguracoes() {
 
     if (commands.length === 0) {
         logEntry('error', 'Nenhum campo preenchido para enviar');
+        showCommandMessage('Nenhum campo preenchido para enviar', 'error');
         return;
     }
 
+    // flag to process next struct response
+    shouldProcessStruct = true;
+
     logEntry('info', `Enviando ${commands.length} comando(s)...`);
     const payload = Array.from(new TextEncoder().encode(commands.join('')));
-    const frame = buildRS485Message(0x01, payload, 0x01);
+    const frame = buildRS485Message(0x02, payload, 0x01);
+
+    // Pause polling while sending command frame to avoid collisions
+    stopPolling();
     await writeBytes(Array.from(frame));
-    logEntry('info', 'Comandos enviados: ' + commands.map(c => c.replace(/#$/, '')).join(' | '));
+    // Resume polling shortly after send completes
+    setTimeout(() => { if (!pollInterval) startPolling(); }, 700);
+
+    const sentSummary = commands.map(c => c.replace(/#$/, '')).join(' | ');
+    commands.map(c => console.log('Enviado: ' + c));
+
+    const hexDB = Array.from(frame)
+        .map(b => b.toString(16).padStart(2, '0').toUpperCase())
+        .join(' ');
+    console.log(`📦 Frame (${hexDB.length} bytes): ${hexDB}`);
+
+    logEntry('info', 'Comandos enviados: ' + sentSummary);
+    showCommandMessage('Enviados: ' + sentSummary, 'info');
     dirtyInputs.clear();
+}
+
+// send the struct request without altering the processing flag
+async function sendStructRequest() {
+    if (!port) { logEntry('error', 'Porta não conectada'); return; }
+    logEntry('info', 'Solicitando configuração do dispositivo...');
+    const payload = Array.from(new TextEncoder().encode('STRUCT#'));
+    const frame = buildRS485Message(0x01, payload, 0x01);
+    // pause polling while issuing single command
+    stopPolling();
+    await writeBytes(Array.from(frame));
+    setTimeout(() => { if (!pollInterval) startPolling(); }, 700);
 }
 
 async function lerConfiguracoes() {
     if (!port) { logEntry('error', 'Porta não conectada'); return; }
+
+    showCommandMessage('Configurações atualizadas', 'info', 10000);
+    // next struct response should be parsed
+    shouldProcessStruct = true;
     dirtyInputs.clear();
     recvBuffer = [];
-    logEntry('info', 'Solicitando configuração do dispositivo...');
-    const payload = Array.from(new TextEncoder().encode('STRUCT#'));
-    const frame = buildRS485Message(0x01, payload, 0x01);
-    await writeBytes(Array.from(frame));
+    await sendStructRequest();
+    showCommandMessage('Configurações atualizadas', 'info', 10000);
 }
 
 async function sendCommand(cmd) {
@@ -743,16 +1026,28 @@ function openPresetModal(mode) {
     const title = document.getElementById('preset-modal-title');
     const savePanel = document.getElementById('preset-save-panel');
     const loadPanel = document.getElementById('preset-load-panel');
+    const ioPanel = document.getElementById('preset-io-panel');
+
+    // hide all by default
+    savePanel.style.display = 'none';
+    loadPanel.style.display = 'none';
+    if (ioPanel) ioPanel.style.display = 'none';
 
     if (mode === 'save') {
         title.textContent = 'Salvar Preset';
         savePanel.style.display = 'block';
-        loadPanel.style.display = 'none';
         document.getElementById('preset-name-input').value = '';
         setTimeout(() => document.getElementById('preset-name-input').focus(), 50);
-    } else {
+    } else if (mode === 'load') {
         title.textContent = 'Carregar Preset';
-        savePanel.style.display = 'none';
+        loadPanel.style.display = 'block';
+        loadPresetList();
+    } else if (mode === 'io') {
+        title.textContent = 'Importar / Exportar Presets';
+        if (ioPanel) ioPanel.style.display = 'flex';
+    } else {
+        // default to load if unknown
+        title.textContent = 'Carregar Preset';
         loadPanel.style.display = 'block';
         loadPresetList();
     }
@@ -865,6 +1160,68 @@ function deletePreset(id) {
     loadPresetList();
 }
 
+// export current presets to a JSON file
+function exportPresets() {
+    const presets = getPresets();
+    const dataStr = JSON.stringify(presets, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const stamp = new Date().toISOString().replace(/[:T]/g, '-').split('.')[0];
+    a.download = `rs485-presets-${stamp}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    logEntry('info', 'Presets exportados');
+    // close modal after exporting
+    closePresetModal();
+}
+
+// handle file input change event
+function handleImportPresets(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const imported = JSON.parse(e.target.result);
+            importPresets(imported);
+        } catch (err) {
+            logEntry('error', 'Erro ao ler arquivo: ' + err.message);
+        }
+    };
+    reader.readAsText(file);
+    // reset input to allow re-importing same file
+    event.target.value = '';
+}
+
+// merge imported presets into existing storage
+function importPresets(imported) {
+    if (typeof imported !== 'object' || imported === null) {
+        logEntry('error', 'Arquivo de presets inválido');
+        return;
+    }
+    const existing = getPresets();
+    let count = 0;
+    for (const key in imported) {
+        const preset = imported[key];
+        if (!preset || typeof preset !== 'object') continue;
+        let newId = Date.now().toString() + '_' + Math.random().toString(36).substr(2, 5);
+        while (existing[newId]) {
+            newId = Date.now().toString() + '_' + Math.random().toString(36).substr(2, 5);
+        }
+        existing[newId] = preset;
+        count++;
+    }
+    localStorage.setItem(PRESET_STORAGE_KEY, JSON.stringify(existing));
+    logEntry('info', `Importados ${count} preset(s)`);
+    loadPresetList();
+    // close modal after importing
+    closePresetModal();
+}
+
 document.addEventListener('keydown', e => {
     if (e.key === 'Escape') document.getElementById('preset-modal').classList.remove('open');
 });
@@ -879,3 +1236,6 @@ logEntry('info', 'Painel iniciado. Clique em "Conectar" para selecionar a porta 
 document.querySelectorAll('input, select').forEach(el => {
     const err = document.createElement('span'); err.className = 'input-error-msg'; el.parentElement.appendChild(err);
 });
+
+// Initialize map
+setTimeout(() => initMap(), 100);
